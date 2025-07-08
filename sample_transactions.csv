@@ -1,0 +1,8 @@
+Date,Description,Account,Category,Type,Amount,Tags,Reference Number,Notes
+2024-01-15,Salary Payment,Main Checking,Salary,income,3500.00,work,SAL-2024-01,Monthly salary
+2024-01-16,Grocery Shopping,Main Checking,Groceries,expense,85.50,food,GRO-001,Weekly groceries
+2024-01-17,Coffee,Main Checking,Food & Drinks,expense,4.50,food,CAF-001,Morning coffee
+2024-01-18,Transfer to Savings,Main Checking,Transfer,transfer,500.00,,TRF-001,Monthly savings
+2024-01-20,Freelance Work,Main Checking,Freelance,income,750.00,work,FREE-001,Web development project
+2024-01-22,Gas Station,Main Checking,Transportation,expense,60.00,transport,GAS-001,Tank full
+2024-01-25,Online Shopping,Main Checking,Shopping,expense,120.00,online,SHOP-001,Electronics accessories

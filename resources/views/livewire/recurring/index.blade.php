@@ -36,10 +36,10 @@ new class extends Component {
                 } elseif ($this->selectedStatus === 'inactive') {
                     $q->where('is_active', false);
                 } elseif ($this->selectedStatus === 'due') {
-                    $q->where('is_active', true)->where('next_date', '<=', now());
+                    $q->where('is_active', true)->where('next_execution_date', '<=', now());
                 }
             })
-            ->orderBy('next_date')
+            ->orderBy('next_execution_date')
             ->orderBy('created_at', 'desc');
 
         return [
@@ -47,7 +47,7 @@ new class extends Component {
             'accounts' => auth()->user()->accounts()->active()->orderBy('name')->get(),
             'categories' => auth()->user()->categories()->active()->orderBy('name')->get(),
             'totalRecurring' => auth()->user()->recurringTransactions()->where('is_active', true)->count(),
-            'dueCount' => auth()->user()->recurringTransactions()->where('is_active', true)->where('next_date', '<=', now())->count(),
+            'dueCount' => auth()->user()->recurringTransactions()->where('is_active', true)->where('next_execution_date', '<=', now())->count(),
             'monthlyIncome' => auth()->user()->recurringTransactions()->where('is_active', true)->where('type', 'income')->sum('amount'),
             'monthlyExpenses' => auth()->user()->recurringTransactions()->where('is_active', true)->where('type', 'expense')->sum('amount'),
         ];
@@ -257,8 +257,8 @@ new class extends Component {
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
                 @foreach($recurringTransactions as $recurring)
                     @php
-                        $isDue = $recurring->is_active && $recurring->next_date && $recurring->next_date->isPast();
-                        $isOverdue = $recurring->is_active && $recurring->next_date && $recurring->next_date->diffInDays(now()) > 7;
+                        $isDue = $recurring->is_active && $recurring->next_execution_date && $recurring->next_execution_date->isPast();
+                        $isOverdue = $recurring->is_active && $recurring->next_execution_date && $recurring->next_execution_date->diffInDays(now()) > 7;
                     @endphp
                     
                     <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -297,12 +297,12 @@ new class extends Component {
                                         <span class="capitalize">{{ $recurring->frequency }}</span>
                                     </div>
                                     
-                                    @if($recurring->next_date)
+                                    @if($recurring->next_execution_date)
                                         <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                            Next: {{ $recurring->next_date->format('M d, Y') }}
+                                            Next: {{ $recurring->next_execution_date->format('M d, Y') }}
                                             @if($isDue)
                                                 <span class="text-yellow-600 dark:text-yellow-400 font-medium">
-                                                    ({{ $recurring->next_date->diffForHumans() }})
+                                                    ({{ $recurring->next_execution_date->diffForHumans() }})
                                                 </span>
                                             @endif
                                         </div>

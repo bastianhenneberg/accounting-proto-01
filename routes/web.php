@@ -28,9 +28,11 @@ Route::middleware(['auth'])->group(function () {
     
     Volt::route('budgets', 'budgets.index')->name('budgets.index');
     Volt::route('budgets/create', 'budgets.create')->name('budgets.create');
+    Volt::route('budgets/{budget}/edit', 'budgets.edit')->name('budgets.edit');
     
     Volt::route('goals', 'goals.index')->name('goals.index');
     Volt::route('goals/create', 'goals.create')->name('goals.create');
+    Volt::route('goals/{goal}/edit', 'goals.edit')->name('goals.edit');
     
     Volt::route('recurring', 'recurring.index')->name('recurring.index');
     Volt::route('recurring/create', 'recurring.create')->name('recurring.create');

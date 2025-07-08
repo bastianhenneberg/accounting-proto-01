@@ -168,7 +168,22 @@ new class extends Component {
                     @php
                         $isCompleted = $goal->current_amount >= $goal->target_amount;
                         $isOverdue = $goal->target_date && $goal->target_date->isPast() && !$isCompleted;
-                        $daysRemaining = $goal->target_date ? $goal->target_date->diffInDays(now(), false) : null;
+                        
+                        if ($goal->target_date) {
+                            $today = now()->startOfDay();
+                            $targetDate = $goal->target_date->startOfDay();
+                            $daysDiff = $today->diffInDays($targetDate, false);
+                            
+                            if ($targetDate->isFuture()) {
+                                $daysRemaining = ceil($daysDiff);
+                            } elseif ($targetDate->isToday()) {
+                                $daysRemaining = 0;
+                            } else {
+                                $daysRemaining = ceil($daysDiff);
+                            }
+                        } else {
+                            $daysRemaining = null;
+                        }
                     @endphp
                     
                     <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -209,12 +224,12 @@ new class extends Component {
                                             <span>Target: {{ $goal->target_date->format('M d, Y') }}</span>
                                             @if($daysRemaining !== null)
                                                 <span>•</span>
-                                                @if($daysRemaining < 0)
-                                                    <span class="text-green-600 dark:text-green-400">{{ abs($daysRemaining) }} days remaining</span>
-                                                @elseif($daysRemaining === 0)
+                                                @if($goal->target_date->isFuture())
+                                                    <span class="text-green-600 dark:text-green-400">{{ $daysRemaining }} {{ $daysRemaining === 1 ? 'day' : 'days' }} remaining</span>
+                                                @elseif($goal->target_date->isToday())
                                                     <span class="text-yellow-600 dark:text-yellow-400">Due today</span>
                                                 @else
-                                                    <span class="text-red-600 dark:text-red-400">{{ $daysRemaining }} days overdue</span>
+                                                    <span class="text-red-600 dark:text-red-400">{{ abs($daysRemaining) }} {{ abs($daysRemaining) === 1 ? 'day' : 'days' }} overdue</span>
                                                 @endif
                                             @endif
                                         @endif

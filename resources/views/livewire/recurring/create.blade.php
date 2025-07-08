@@ -43,7 +43,7 @@ new class extends Component {
         // Create the recurring transaction
         $recurringTransaction = auth()->user()->recurringTransactions()->create([
             ...$validated,
-            'next_date' => $validated['start_date'],
+            'next_execution_date' => $validated['start_date'],
         ]);
 
         session()->flash('success', 'Recurring transaction created successfully.');
