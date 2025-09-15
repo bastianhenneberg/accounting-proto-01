@@ -289,8 +289,7 @@ new class extends Component {
             </div>
             <div class="flex space-x-2">
                 <flux:dropdown>
-                    <flux:button variant="outline">
-                        <flux:icon.arrow-down-tray class="w-4 h-4 mr-2" />
+                    <flux:button variant="outline" icon="arrow-down-tray">
                         Import/Export
                     </flux:button>
                     
@@ -305,8 +304,7 @@ new class extends Component {
                     </flux:menu>
                 </flux:dropdown>
                 
-                <flux:button href="/transactions/create" variant="primary" wire:navigate>
-                    <flux:icon.plus class="w-4 h-4 mr-2" />
+                <flux:button href="/transactions/create" variant="primary" icon="plus" wire:navigate>
                     Add Transaction
                 </flux:button>
             </div>
@@ -472,16 +470,17 @@ new class extends Component {
                     @endforeach
                 </div>
                 
-                <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                    {{ $transactions->links() }}
-                </div>
+                @if($transactions->hasPages())
+                    <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        {{ $transactions->links() }}
+                    </div>
+                @endif
             @else
                 <div class="p-12 text-center">
                     <flux:icon.banknotes class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No transactions found</h3>
                     <p class="text-gray-500 dark:text-gray-400 mb-6">Start tracking your finances by adding transactions</p>
-                    <flux:button href="/transactions/create" variant="primary" wire:navigate>
-                        <flux:icon.plus class="w-4 h-4 mr-2" />
+                    <flux:button href="/transactions/create" variant="primary" icon="plus" wire:navigate>
                         Add Your First Transaction
                     </flux:button>
                 </div>

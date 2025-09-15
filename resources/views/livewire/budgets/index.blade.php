@@ -78,8 +78,7 @@ new class extends Component {
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Budgets</h1>
             <p class="text-gray-600 dark:text-gray-400">Track your spending against budget limits</p>
         </div>
-        <flux:button href="/budgets/create" variant="primary" wire:navigate>
-            <flux:icon.plus class="w-4 h-4 mr-2" />
+        <flux:button href="/budgets/create" variant="primary" icon="plus" wire:navigate>
             Create Budget
         </flux:button>
     </div>
@@ -243,16 +242,17 @@ new class extends Component {
                 @endforeach
             </div>
             
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                {{ $budgets->links() }}
-            </div>
+            @if($budgets->hasPages())
+                <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    {{ $budgets->links() }}
+                </div>
+            @endif
         @else
             <div class="p-12 text-center">
                 <flux:icon.chart-bar class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No budgets found</h3>
                 <p class="text-gray-500 dark:text-gray-400 mb-6">Start managing your finances by creating budget limits</p>
-                <flux:button href="/budgets/create" variant="primary" wire:navigate>
-                    <flux:icon.plus class="w-4 h-4 mr-2" />
+                <flux:button href="/budgets/create" variant="primary" icon="plus" wire:navigate>
                     Create Your First Budget
                 </flux:button>
             </div>

@@ -97,8 +97,7 @@ new class extends Component {
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Categories</h1>
                 <p class="text-gray-600 dark:text-gray-400">Organize your income and expenses</p>
             </div>
-            <flux:button wire:click="$toggle('showCreateForm')" variant="primary">
-                <flux:icon.plus class="w-4 h-4 mr-2" />
+            <flux:button wire:click="$toggle('showCreateForm')" variant="primary" icon="plus">
                 Add Category
             </flux:button>
         </div>

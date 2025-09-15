@@ -79,8 +79,7 @@ new class extends Component {
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Goals</h1>
             <p class="text-gray-600 dark:text-gray-400">Track your savings goals and financial milestones</p>
         </div>
-        <flux:button href="/goals/create" variant="primary" wire:navigate>
-            <flux:icon.plus class="w-4 h-4 mr-2" />
+        <flux:button href="/goals/create" variant="primary" icon="plus" wire:navigate>
             Create Goal
         </flux:button>
     </div>
@@ -188,7 +187,7 @@ new class extends Component {
                     
                     <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-4 flex-1">
+                            <div class="flex items-center space-x-4">
                                 <div class="p-3 rounded-full {{ $isCompleted ? 'bg-green-100 dark:bg-green-900/20' : ($isOverdue ? 'bg-red-100 dark:bg-red-900/20' : 'bg-blue-100 dark:bg-blue-900/20') }}">
                                     @if($isCompleted)
                                         <flux:icon.check-circle class="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -199,44 +198,35 @@ new class extends Component {
                                     @endif
                                 </div>
                                 
-                                <div class="flex-1">
-                                    <div class="flex items-center space-x-2">
-                                        <h3 class="font-medium text-gray-900 dark:text-white">
-                                            {{ $goal->name }}
-                                        </h3>
-                                        @if($isCompleted)
-                                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                                                Completed
-                                            </span>
-                                        @elseif($isOverdue)
-                                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                                                Overdue
-                                            </span>
-                                        @endif
-                                    </div>
-                                    
-                                    @if($goal->description)
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ $goal->description }}</p>
-                                    @endif
-                                    
-                                    <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                <div>
+                                    <h3 class="font-medium text-gray-900 dark:text-white">
+                                        {{ $goal->name }}
+                                    </h3>
+                                    <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
                                         @if($goal->target_date)
-                                            <span>Target: {{ $goal->target_date->format('M d, Y') }}</span>
+                                            <span>{{ $goal->target_date->format('M d, Y') }}</span>
                                             @if($daysRemaining !== null)
                                                 <span>•</span>
                                                 @if($goal->target_date->isFuture())
-                                                    <span class="text-green-600 dark:text-green-400">{{ $daysRemaining }} {{ $daysRemaining === 1 ? 'day' : 'days' }} remaining</span>
+                                                    <span>{{ $daysRemaining }} days left</span>
                                                 @elseif($goal->target_date->isToday())
-                                                    <span class="text-yellow-600 dark:text-yellow-400">Due today</span>
+                                                    <span>Due today</span>
                                                 @else
-                                                    <span class="text-red-600 dark:text-red-400">{{ abs($daysRemaining) }} {{ abs($daysRemaining) === 1 ? 'day' : 'days' }} overdue</span>
+                                                    <span>{{ abs($daysRemaining) }} days overdue</span>
                                                 @endif
                                             @endif
                                         @endif
+                                        @if($isCompleted)
+                                            <span>•</span>
+                                            <span class="text-green-600 dark:text-green-400">Completed</span>
+                                        @elseif($isOverdue)
+                                            <span>•</span>
+                                            <span class="text-red-600 dark:text-red-400">Overdue</span>
+                                        @endif
                                     </div>
                                     
-                                    <div class="mt-3">
-                                        <div class="flex items-center justify-between text-sm mb-1">
+                                    <div class="mt-2">
+                                        <div class="flex items-center justify-between text-sm">
                                             <span class="text-gray-600 dark:text-gray-400">
                                                 €{{ number_format($goal->current_amount, 2) }} / €{{ number_format($goal->target_amount, 2) }}
                                             </span>
@@ -244,7 +234,7 @@ new class extends Component {
                                                 {{ number_format($goal->percentage_completed, 1) }}%
                                             </span>
                                         </div>
-                                        <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                                        <div class="w-full bg-gray-200 rounded-full h-2 mt-1 dark:bg-gray-700">
                                             <div class="h-2 rounded-full {{ $isCompleted ? 'bg-green-600' : 'bg-blue-600' }}" 
                                                  style="width: {{ min($goal->percentage_completed, 100) }}%"></div>
                                         </div>
@@ -291,16 +281,17 @@ new class extends Component {
                 @endforeach
             </div>
             
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                {{ $goals->links() }}
-            </div>
+            @if($goals->hasPages())
+                <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    {{ $goals->links() }}
+                </div>
+            @endif
         @else
             <div class="p-12 text-center">
                 <flux:icon.flag class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No goals found</h3>
                 <p class="text-gray-500 dark:text-gray-400 mb-6">Start planning your financial future by setting savings goals</p>
-                <flux:button href="/goals/create" variant="primary" wire:navigate>
-                    <flux:icon.plus class="w-4 h-4 mr-2" />
+                <flux:button href="/goals/create" variant="primary" icon="plus" wire:navigate>
                     Create Your First Goal
                 </flux:button>
             </div>

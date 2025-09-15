@@ -4,63 +4,53 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky stashable class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
-
-            <a href="{{ route('dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
-                <x-app-logo />
-            </a>
-
-            <flux:navlist variant="outline">
-                <flux:navlist.group :heading="__('Overview')" class="grid">
-                    <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
-                </flux:navlist.group>
-
-                <flux:navlist.group :heading="__('Finance')" class="grid">
-                    <flux:navlist.item icon="credit-card" href="/accounts" :current="request()->is('accounts*')" wire:navigate>{{ __('Accounts') }}</flux:navlist.item>
-                    <flux:navlist.item icon="arrow-path" href="/transactions" :current="request()->is('transactions*')" wire:navigate>{{ __('Transactions') }}</flux:navlist.item>
-                    <flux:navlist.item icon="folder" href="/categories" :current="request()->is('categories*')" wire:navigate>{{ __('Categories') }}</flux:navlist.item>
-                    <flux:navlist.item icon="chart-bar" href="/budgets" :current="request()->is('budgets*')" wire:navigate>{{ __('Budgets') }}</flux:navlist.item>
-                </flux:navlist.group>
-
-                <flux:navlist.group :heading="__('Planning')" class="grid">
-                    <flux:navlist.item icon="flag" href="/goals" :current="request()->is('goals*')" wire:navigate>{{ __('Goals') }}</flux:navlist.item>
-                    <flux:navlist.item icon="arrow-path" href="/recurring" :current="request()->is('recurring*')" wire:navigate>{{ __('Recurring') }}</flux:navlist.item>
-                </flux:navlist.group>
-            </flux:navlist>
-
-            <flux:spacer />
-
-            <flux:navlist variant="outline">
-                <flux:navlist.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                {{ __('Repository') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                {{ __('Documentation') }}
-                </flux:navlist.item>
-            </flux:navlist>
-
-            <!-- Desktop User Menu -->
-            <flux:dropdown class="hidden lg:block" position="bottom" align="start">
-                <flux:profile
-                    :name="auth()->user()->name"
-                    :initials="auth()->user()->initials()"
-                    icon:trailing="chevrons-up-down"
+        <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700">
+            <flux:sidebar.header>
+                <flux:sidebar.brand
+                    :href="route('dashboard')"
+                    logo="https://fluxui.dev/img/demo/logo.png"
+                    logo:dark="https://fluxui.dev/img/demo/dark-mode-logo.png"
+                    name="Finance App"
                 />
 
-                <flux:menu class="w-[220px]">
+                <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />
+            </flux:sidebar.header>
+
+            <flux:sidebar.nav>
+                <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:sidebar.item>
+                
+                <flux:sidebar.group expandable icon="credit-card" heading="{{ __('Finance') }}" class="grid">
+                    <flux:sidebar.item icon="credit-card" href="/accounts" :current="request()->is('accounts*')" wire:navigate>{{ __('Accounts') }}</flux:sidebar.item>
+                    <flux:sidebar.item icon="arrow-path" href="/transactions" :current="request()->is('transactions*')" wire:navigate>{{ __('Transactions') }}</flux:sidebar.item>
+                    <flux:sidebar.item icon="folder" href="/categories" :current="request()->is('categories*')" wire:navigate>{{ __('Categories') }}</flux:sidebar.item>
+                    <flux:sidebar.item icon="chart-bar" href="/budgets" :current="request()->is('budgets*')" wire:navigate>{{ __('Budgets') }}</flux:sidebar.item>
+                </flux:sidebar.group>
+
+                <flux:sidebar.group expandable icon="flag" heading="{{ __('Planning') }}" class="grid">
+                    <flux:sidebar.item icon="flag" href="/goals" :current="request()->is('goals*')" wire:navigate>{{ __('Goals') }}</flux:sidebar.item>
+                    <flux:sidebar.item icon="arrow-path" href="/recurring" :current="request()->is('recurring*')" wire:navigate>{{ __('Recurring') }}</flux:sidebar.item>
+                </flux:sidebar.group>
+            </flux:sidebar.nav>
+
+            <flux:sidebar.spacer />
+
+            <flux:sidebar.nav>
+                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">{{ __('Repository') }}</flux:sidebar.item>
+                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">{{ __('Documentation') }}</flux:sidebar.item>
+            </flux:sidebar.nav>
+
+            <flux:dropdown position="top" align="start" class="max-lg:hidden">
+                <flux:sidebar.profile :name="auth()->user()->name" :initials="auth()->user()->initials()" />
+
+                <flux:menu>
                     <flux:menu.radio.group>
                         <div class="p-0 text-sm font-normal">
                             <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                                 <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                    <span
-                                        class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white"
-                                    >
+                                    <span class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
                                         {{ auth()->user()->initials() }}
                                     </span>
                                 </span>
-
                                 <div class="grid flex-1 text-start text-sm leading-tight">
                                     <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
                                     <span class="truncate text-xs">{{ auth()->user()->email }}</span>
@@ -71,9 +61,7 @@
 
                     <flux:menu.separator />
 
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
-                    </flux:menu.radio.group>
+                    <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
 
                     <flux:menu.separator />
 
@@ -87,7 +75,6 @@
             </flux:dropdown>
         </flux:sidebar>
 
-        <!-- Mobile User Menu -->
         <flux:header class="lg:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
@@ -104,13 +91,10 @@
                         <div class="p-0 text-sm font-normal">
                             <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                                 <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                    <span
-                                        class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white"
-                                    >
+                                    <span class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
                                         {{ auth()->user()->initials() }}
                                     </span>
                                 </span>
-
                                 <div class="grid flex-1 text-start text-sm leading-tight">
                                     <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
                                     <span class="truncate text-xs">{{ auth()->user()->email }}</span>
@@ -121,9 +105,7 @@
 
                     <flux:menu.separator />
 
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
-                    </flux:menu.radio.group>
+                    <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
 
                     <flux:menu.separator />
 
