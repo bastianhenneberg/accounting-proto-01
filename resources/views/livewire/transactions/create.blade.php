@@ -47,13 +47,6 @@ new class extends Component {
         $account = auth()->user()->accounts()->findOrFail($validated['account_id']);
         $category = auth()->user()->categories()->findOrFail($validated['category_id']);
 
-        // Update account balance
-        if ($validated['type'] === 'income') {
-            $account->increment('balance', $validated['amount']);
-        } else {
-            $account->decrement('balance', $validated['amount']);
-        }
-
         // Handle receipt upload
         $receiptPath = null;
         $receiptFilename = null;

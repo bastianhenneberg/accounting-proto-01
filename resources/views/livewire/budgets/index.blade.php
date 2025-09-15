@@ -47,7 +47,7 @@ new class extends Component {
         $budget = auth()->user()->budgets()->findOrFail($budgetId);
         $budget->delete();
         
-        session()->flash('success', 'Budget deleted successfully.');
+        session()->flash('success', __('Budget deleted successfully.'));
     }
 
     public function updatedSearch(): void
@@ -75,11 +75,11 @@ new class extends Component {
 <div class="p-6">
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Budgets</h1>
-            <p class="text-gray-600 dark:text-gray-400">Track your spending against budget limits</p>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ __('Budgets') }}</h1>
+            <p class="text-gray-600 dark:text-gray-400">{{ __('Track your spending against budget limits') }}</p>
         </div>
         <flux:button href="/budgets/create" variant="primary" icon="plus" wire:navigate>
-            Create Budget
+            {{ __('Create Budget') }}
         </flux:button>
     </div>
 
@@ -91,7 +91,7 @@ new class extends Component {
                     <flux:icon.chart-bar class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Total Budgets</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Total Budgets') }}</p>
                     <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ $totalBudgets }}</p>
                 </div>
             </div>
@@ -103,7 +103,7 @@ new class extends Component {
                     <flux:icon.exclamation-triangle class="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Over Budget</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Over Budget') }}</p>
                     <p class="text-lg font-semibold text-red-600 dark:text-red-400">{{ $overBudgetCount }}</p>
                 </div>
             </div>
@@ -115,7 +115,7 @@ new class extends Component {
                     <flux:icon.currency-euro class="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Total Budget</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Total Budget') }}</p>
                     <p class="text-lg font-semibold text-green-600 dark:text-green-400">€{{ number_format($totalBudgetAmount, 2) }}</p>
                 </div>
             </div>
@@ -127,7 +127,7 @@ new class extends Component {
                     <flux:icon.banknotes class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Total Spent</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Total Spent') }}</p>
                     <p class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">€{{ number_format($totalSpentAmount, 2) }}</p>
                 </div>
             </div>
@@ -138,12 +138,12 @@ new class extends Component {
     <div class="bg-white rounded-lg border border-neutral-200 p-4 mb-6 dark:bg-neutral-800 dark:border-neutral-700">
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
-                <flux:input wire:model.live="search" placeholder="Search budget names..." />
+                <flux:input wire:model.live="search" placeholder="{{ __('Search budget names...') }}" />
             </div>
             
             <div>
-                <flux:select wire:model.live="selectedCategory" placeholder="All Categories">
-                    <option value="">All Categories</option>
+                <flux:select wire:model.live="selectedCategory" placeholder="{{ __('All Categories') }}">
+                    <option value="">{{ __('All Categories') }}</option>
                     @foreach($categories as $category)
                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                     @endforeach
@@ -151,16 +151,16 @@ new class extends Component {
             </div>
             
             <div>
-                <flux:select wire:model.live="selectedStatus" placeholder="All Statuses">
-                    <option value="">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="over_budget">Over Budget</option>
+                <flux:select wire:model.live="selectedStatus" placeholder="{{ __('All Statuses') }}">
+                    <option value="">{{ __('All Statuses') }}</option>
+                    <option value="active">{{ __('Active') }}</option>
+                    <option value="over_budget">{{ __('Over Budget') }}</option>
                 </flux:select>
             </div>
             
             <div class="flex items-end">
                 <flux:button wire:click="clearFilters" variant="ghost" size="sm">
-                    Clear Filters
+                    {{ __('Clear Filters') }}
                 </flux:button>
             </div>
         </div>
@@ -210,7 +210,7 @@ new class extends Component {
                             
                             <div class="flex items-center space-x-4">
                                 <div class="text-right">
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Remaining</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Remaining') }}</p>
                                     <p class="font-medium {{ $budget->remaining_amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                                         €{{ number_format($budget->remaining_amount, 2) }}
                                     </p>
@@ -221,18 +221,18 @@ new class extends Component {
                                     
                                     <flux:menu>
                                         <flux:menu.item href="/budgets/{{ $budget->id }}" icon="eye" wire:navigate>
-                                            View Details
+                                            {{ __('View Details') }}
                                         </flux:menu.item>
                                         <flux:menu.item href="/budgets/{{ $budget->id }}/edit" icon="pencil" wire:navigate>
-                                            Edit Budget
+                                            {{ __('Edit Budget') }}
                                         </flux:menu.item>
                                         <flux:menu.separator />
                                         <flux:menu.item 
                                             wire:click="deleteBudget({{ $budget->id }})"
-                                            wire:confirm="Are you sure you want to delete this budget?"
+                                            wire:confirm="{{ __('Are you sure you want to delete this budget?') }}"
                                             icon="trash" 
                                             variant="danger">
-                                            Delete Budget
+                                            {{ __('Delete Budget') }}
                                         </flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
@@ -250,10 +250,10 @@ new class extends Component {
         @else
             <div class="p-12 text-center">
                 <flux:icon.chart-bar class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No budgets found</h3>
-                <p class="text-gray-500 dark:text-gray-400 mb-6">Start managing your finances by creating budget limits</p>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ __('No budgets found') }}</h3>
+                <p class="text-gray-500 dark:text-gray-400 mb-6">{{ __('Start managing your finances by creating budget limits') }}</p>
                 <flux:button href="/budgets/create" variant="primary" icon="plus" wire:navigate>
-                    Create Your First Budget
+                    {{ __('Create Your First Budget') }}
                 </flux:button>
             </div>
         @endif

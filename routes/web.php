@@ -42,6 +42,16 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+    Volt::route('settings/language', 'settings.language')->name('settings.language');
+
+    // Locale switching route
+    Route::get('/locale/{locale}', function (string $locale) {
+        if (in_array($locale, ['en', 'de'])) {
+            session(['locale' => $locale]);
+        }
+
+        return redirect()->back();
+    })->name('locale.set');
 });
 
 require __DIR__.'/auth.php';

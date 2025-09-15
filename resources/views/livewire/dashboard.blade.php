@@ -77,7 +77,7 @@ new class extends Component {
             <div class="bg-white rounded-lg border border-neutral-200 p-6 dark:bg-neutral-800 dark:border-neutral-700">
                 <div class="flex items-center">
                     <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Balance</p>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ __('Total Balance') }}</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">
                             €{{ number_format($totalBalance, 2) }}
                         </p>
@@ -140,7 +140,7 @@ new class extends Component {
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h3>
                     <flux:link href="/transactions" class="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                        View all
+                        {{ __('View all') }}
                     </flux:link>
                 </div>
                 <div class="space-y-3">
@@ -182,7 +182,7 @@ new class extends Component {
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Active Budgets</h3>
                         <flux:link href="/budgets" class="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                            View all
+                            {{ __('View all') }}
                         </flux:link>
                     </div>
                     <div class="space-y-3">
@@ -200,7 +200,7 @@ new class extends Component {
                                 </div>
                             </div>
                         @empty
-                            <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No active budgets</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-2">{{ __('No active budgets') }}</p>
                         @endforelse
                     </div>
                 </div>
@@ -208,9 +208,9 @@ new class extends Component {
                 {{-- Goals --}}
                 <div class="bg-white rounded-lg border border-neutral-200 p-6 dark:bg-neutral-800 dark:border-neutral-700">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Goals</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Goals') }}</h3>
                         <flux:link href="/goals" class="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                            View all
+                            {{ __('View all') }}
                         </flux:link>
                     </div>
                     <div class="space-y-3">
@@ -227,12 +227,12 @@ new class extends Component {
                                 </div>
                                 @if($goal->target_date)
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        Target: {{ $goal->target_date->format('M d, Y') }}
+                                        {{ __('Target') }}: {{ $goal->target_date->format('M d, Y') }}
                                     </p>
                                 @endif
                             </div>
                         @empty
-                            <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No active goals</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-2">{{ __('No active goals') }}</p>
                         @endforelse
                     </div>
                 </div>

@@ -36,12 +36,11 @@ new class extends Component {
 <div class="p-6">
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Accounts</h1>
-            <p class="text-gray-600 dark:text-gray-400">Manage your financial accounts</p>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ __('Accounts') }}</h1>
+            <p class="text-gray-600 dark:text-gray-400">{{ __('Manage your financial accounts') }}</p>
         </div>
-        <flux:button href="/accounts/create" variant="primary" wire:navigate>
-            <flux:icon.plus class="w-4 h-4 mr-2" />
-            Add Account
+        <flux:button href="/accounts/create" variant="primary" icon="plus" wire:navigate>
+            {{ __('Add Account') }}
         </flux:button>
     </div>
 
@@ -49,7 +48,7 @@ new class extends Component {
     <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white mb-6">
         <div class="flex items-center justify-between">
             <div>
-                <h3 class="text-lg font-medium opacity-90">Total Balance</h3>
+                <h3 class="text-lg font-medium opacity-90">{{ __('Total Balance') }}</h3>
                 <p class="text-3xl font-bold">€{{ number_format($totalBalance, 2) }}</p>
                 <p class="text-sm opacity-75">Across {{ count($accounts) }} account{{ count($accounts) !== 1 ? 's' : '' }}</p>
             </div>
