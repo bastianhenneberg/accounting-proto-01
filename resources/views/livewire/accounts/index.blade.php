@@ -98,7 +98,13 @@ new class extends Component {
                                     <p class="text-2xl font-bold text-gray-900 dark:text-white">
                                         €{{ number_format($account->balance, 2) }}
                                     </p>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ $account->currency }}</p>
+                                    @if($account->projected_balance != $account->balance)
+                                        <p class="text-sm {{ $account->projected_balance >= $account->balance ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                            {{ __('Projected') }}: €{{ number_format($account->projected_balance, 2) }}
+                                        </p>
+                                    @else
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $account->currency }}</p>
+                                    @endif
                                 </div>
                                 
                                 <flux:dropdown>

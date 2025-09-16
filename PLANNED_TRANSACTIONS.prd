@@ -1,0 +1,322 @@
+# Product Requirements Document (PRD)
+# Planned Transactions Feature
+
+## 1. Overview
+
+### 1.1 Feature Summary
+The Planned Transactions feature allows users to record and manage future financial transactions that are expected but haven't occurred yet. This enables better financial planning by visualizing upcoming cash flows and their impact on account balances.
+
+### 1.2 Problem Statement
+Users currently can only track historical transactions and set up recurring patterns. There's no way to:
+- Plan for known future one-time transactions (e.g., annual insurance payment, tax refund)
+- See projected account balances after planned expenses/income
+- Get reminders about upcoming financial obligations
+- Automatically convert planned transactions to actual transactions on their due date
+
+### 1.3 Success Metrics
+- Users can plan at least 7 days ahead with their finances
+- 80% of planned transactions are successfully converted to actual transactions
+- Users report improved financial awareness and reduced surprise expenses
+
+## 2. User Stories
+
+### 2.1 Core User Stories
+**As a user, I want to:**
+- Record a planned future expense/income with a specific date
+- See my projected account balance after planned transactions
+- View upcoming transactions in a timeline/calendar format
+- Automatically convert planned transactions to real transactions on their due date
+- Edit or cancel planned transactions before they occur
+- Get notified about transactions due today
+
+### 2.2 Acceptance Criteria
+- Users can create planned transactions with amount, date, account, and category
+- Dashboard shows upcoming transactions for next 7-30 days
+- Account pages show both current and projected balance
+- Planned transactions automatically convert to actual transactions on due date
+- Users can manually convert planned transactions early
+- All planned transaction operations maintain data integrity
+
+## 3. Technical Specifications
+
+### 3.1 Database Schema
+```sql
+CREATE TABLE planned_transactions (
+    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NOT NULL,
+    account_id BIGINT UNSIGNED NOT NULL,
+    category_id BIGINT UNSIGNED NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    type ENUM('income', 'expense') NOT NULL,
+    planned_date DATE NOT NULL,
+    status ENUM('pending', 'confirmed', 'converted', 'cancelled') DEFAULT 'pending',
+    notes TEXT NULL,
+    auto_convert BOOLEAN DEFAULT true,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+
+    INDEX idx_user_planned_date (user_id, planned_date),
+    INDEX idx_status_planned_date (status, planned_date)
+);
+```
+
+### 3.2 Model Relationships
+```php
+// User Model
+public function plannedTransactions(): HasMany
+{
+    return $this->hasMany(PlannedTransaction::class);
+}
+
+// Account Model
+public function plannedTransactions(): HasMany
+{
+    return $this->hasMany(PlannedTransaction::class);
+}
+
+public function getProjectedBalanceAttribute(): float
+{
+    $pendingAmount = $this->plannedTransactions()
+        ->where('status', 'pending')
+        ->where('planned_date', '<=', now()->addDays(30))
+        ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+    return $this->balance + $pendingAmount;
+}
+
+// Category Model
+public function plannedTransactions(): HasMany
+{
+    return $this->hasMany(PlannedTransaction::class);
+}
+```
+
+### 3.3 API Endpoints
+```php
+// Routes
+Route::group(['prefix' => 'planned-transactions', 'middleware' => 'auth'], function () {
+    Route::get('/', PlannedTransactionController::class, 'index')->name('planned.index');
+    Route::get('/create', PlannedTransactionController::class, 'create')->name('planned.create');
+    Route::post('/', PlannedTransactionController::class, 'store')->name('planned.store');
+    Route::get('/{planned}/edit', PlannedTransactionController::class, 'edit')->name('planned.edit');
+    Route::put('/{planned}', PlannedTransactionController::class, 'update')->name('planned.update');
+    Route::delete('/{planned}', PlannedTransactionController::class, 'destroy')->name('planned.destroy');
+    Route::post('/{planned}/convert', PlannedTransactionController::class, 'convert')->name('planned.convert');
+});
+```
+
+### 3.4 Background Processing
+```php
+// Artisan Command: app/Console/Commands/ProcessPlannedTransactions.php
+php artisan planned:process-due
+
+// Scheduled in bootstrap/app.php
+$schedule->command('planned:process-due')->daily();
+```
+
+## 4. User Interface Design
+
+### 4.1 Navigation Integration
+```
+Sidebar:
+Planning
+├── Goals
+├── Recurring
+└── Planned Transactions (NEW)
+```
+
+### 4.2 Main Views
+
+#### 4.2.1 Planned Transactions Index (`/planned-transactions`)
+```
+Header: "Planned Transactions"
+Subheader: "Manage your upcoming financial transactions"
+
+Filters:
+- Date Range (Next 7 days, 30 days, 90 days, Custom)
+- Account Filter
+- Category Filter
+- Type (Income/Expense)
+- Status (Pending, Confirmed)
+
+Timeline View:
+┌─────────────────────────────────────┐
+│ TODAY (Sep 16)                      │
+│ ⚠️  Insurance Payment     -€150.00   │
+│ 💰 Freelance Payment     +€500.00   │
+├─────────────────────────────────────│
+│ TOMORROW (Sep 17)                   │
+│ 🏠 Rent Payment          -€900.00   │
+├─────────────────────────────────────│
+│ THIS WEEK                           │
+│ 🛒 Grocery Budget        -€80.00    │
+│ ⛽ Gas Bill              -€45.00    │
+└─────────────────────────────────────┘
+
+Action Buttons: [Convert Now] [Edit] [Delete]
+```
+
+#### 4.2.2 Create Planned Transaction (`/planned-transactions/create`)
+```
+Form Fields:
+- Transaction Type (Income/Expense) - Radio buttons with icons
+- Description - Text input
+- Amount - Number input with € symbol
+- Account - Dropdown
+- Category - Dropdown (filtered by type)
+- Planned Date - Date picker (min: tomorrow)
+- Auto Convert - Checkbox (default: true)
+- Notes - Textarea (optional)
+
+Preview Section:
+Shows how the transaction will appear and impact on the planned date
+```
+
+#### 4.2.3 Dashboard Integration
+```
+New Dashboard Widget: "Upcoming Transactions"
+┌─────────────────────────────────────┐
+│ Upcoming (Next 7 days)              │
+│ 3 transactions planned               │
+│                                     │
+│ Net Impact: -€545.00                │
+│ ● 1 Income    +€500.00              │
+│ ● 2 Expenses  -€1,045.00            │
+│                                     │
+│ [View All Planned] →                │
+└─────────────────────────────────────┘
+```
+
+#### 4.2.4 Account Balance Enhancement
+```
+Current Account View:
+Current Balance: €1,250.00
+Projected Balance (30 days): €905.00
+├─ Pending Income: +€500.00
+└─ Pending Expenses: -€845.00
+```
+
+### 4.3 Status Indicators
+- 🟡 **Due Today** - Requires immediate attention
+- 🟢 **Upcoming** - Planned for future dates
+- 🔵 **Confirmed** - User has verified the transaction will happen
+- ⚪ **Pending** - Awaiting user confirmation
+- ✅ **Converted** - Successfully turned into actual transaction
+
+## 5. Business Logic
+
+### 5.1 Auto-Conversion Process
+```php
+// Daily at 9:00 AM
+foreach (PlannedTransaction::dueToday() as $planned) {
+    if ($planned->auto_convert && $planned->status === 'confirmed') {
+        // Create actual transaction
+        $transaction = Transaction::create([
+            'user_id' => $planned->user_id,
+            'account_id' => $planned->account_id,
+            'category_id' => $planned->category_id,
+            'description' => $planned->description,
+            'amount' => $planned->amount,
+            'type' => $planned->type,
+            'transaction_date' => $planned->planned_date,
+            'notes' => "Auto-converted from planned transaction",
+        ]);
+
+        // Update planned transaction status
+        $planned->update(['status' => 'converted']);
+
+        // Send notification to user
+        $user->notify(new PlannedTransactionProcessed($planned, $transaction));
+    }
+}
+```
+
+### 5.2 Balance Projection Logic
+```php
+public function getProjectedBalance(int $days = 30): float
+{
+    $pendingTransactions = $this->plannedTransactions()
+        ->where('status', 'pending')
+        ->where('planned_date', '<=', now()->addDays($days))
+        ->get();
+
+    $projection = $this->balance;
+
+    foreach ($pendingTransactions as $planned) {
+        if ($planned->type === 'income') {
+            $projection += $planned->amount;
+        } else {
+            $projection -= $planned->amount;
+        }
+    }
+
+    return $projection;
+}
+```
+
+## 6. Implementation Phases
+
+### Phase 1: Core Functionality (Day 1)
+- [ ] Create PlannedTransaction model and migration
+- [ ] Build CRUD views with Livewire Volt
+- [ ] Implement basic timeline view
+- [ ] Add navigation integration
+
+### Phase 2: Dashboard Integration (Day 1-2)
+- [ ] Add "Upcoming Transactions" widget to dashboard
+- [ ] Enhance account views with projected balances
+- [ ] Create status indicators and color coding
+
+### Phase 3: Automation (Day 2)
+- [ ] Implement auto-conversion Artisan command
+- [ ] Add scheduling configuration
+- [ ] Create notification system for due transactions
+
+### Phase 4: Advanced Features (Day 3)
+- [ ] Calendar view integration
+- [ ] Bulk operations (mark multiple as confirmed)
+- [ ] Integration with budget projections
+- [ ] Export/import functionality
+
+## 7. Technical Considerations
+
+### 7.1 Security
+- Ensure all planned transactions are user-scoped
+- Validate account and category ownership
+- Implement proper authorization policies
+
+### 7.2 Performance
+- Index on user_id and planned_date for efficient queries
+- Cache projected balances for frequently accessed accounts
+- Pagination for large planned transaction lists
+
+### 7.3 Data Integrity
+- Use database transactions for conversion process
+- Handle edge cases (deleted accounts/categories)
+- Implement soft deletes for audit trail
+
+## 8. Multilingual Support
+All strings will be translation-ready from day one:
+- "Planned Transactions" → "Geplante Transaktionen"
+- "Due Today" → "Heute fällig"
+- "Projected Balance" → "Prognostizierter Saldo"
+- "Convert to Transaction" → "In Transaktion umwandeln"
+
+## 9. Future Enhancements
+- **Smart Suggestions:** ML-based prediction of recurring patterns
+- **Cash Flow Analysis:** Visual charts of planned vs actual
+- **Template System:** Save common planned transactions as templates
+- **Mobile Notifications:** Push notifications for due transactions
+- **Integration with Bank APIs:** Import planned transactions from bank feeds
+
+---
+
+**Ready for Implementation:** ✅
+**Estimated Development Time:** 2-3 days
+**Dependencies:** Current Transaction and Account systems
+**Risk Level:** Low (builds on existing architecture)

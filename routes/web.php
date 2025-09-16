@@ -37,6 +37,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('recurring', 'recurring.index')->name('recurring.index');
     Volt::route('recurring/create', 'recurring.create')->name('recurring.create');
 
+    Volt::route('planned', 'planned.index')->name('planned.index');
+    Volt::route('planned/create', 'planned.create')->name('planned.create');
+
     // Settings routes
     Route::redirect('settings', 'settings/profile');
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
