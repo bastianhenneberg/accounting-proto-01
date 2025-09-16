@@ -55,6 +55,34 @@ class Budget extends Model
         return $this->spent_amount > $this->amount;
     }
 
+    public function getProjectedSpentAmountAttribute(): float
+    {
+        // Add confirmed planned transactions to current spent amount
+        $confirmedPlannedAmount = $this->user->plannedTransactions()
+            ->where('category_id', $this->category_id)
+            ->where('type', 'expense')
+            ->where('status', 'confirmed')
+            ->whereBetween('planned_date', [$this->start_date, $this->end_date])
+            ->sum('amount');
+
+        return $this->spent_amount + $confirmedPlannedAmount;
+    }
+
+    public function getProjectedPercentageUsedAttribute(): float
+    {
+        return $this->amount > 0 ? ($this->projected_spent_amount / $this->amount) * 100 : 0;
+    }
+
+    public function getProjectedRemainingAmountAttribute(): float
+    {
+        return $this->amount - $this->projected_spent_amount;
+    }
+
+    public function isProjectedOverBudget(): bool
+    {
+        return $this->projected_spent_amount > $this->amount;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

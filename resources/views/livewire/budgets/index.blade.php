@@ -192,6 +192,7 @@ new class extends Component {
                                         @endif
                                     </div>
                                     <div class="mt-2">
+                                        {{-- Current Progress --}}
                                         <div class="flex items-center justify-between text-sm">
                                             <span class="text-gray-600 dark:text-gray-400">
                                                 €{{ number_format($budget->spent_amount, 2) }} / €{{ number_format($budget->amount, 2) }}
@@ -201,9 +202,28 @@ new class extends Component {
                                             </span>
                                         </div>
                                         <div class="w-full bg-gray-200 rounded-full h-2 mt-1 dark:bg-gray-700">
-                                            <div class="h-2 rounded-full {{ $budget->percentage_used > 100 ? 'bg-red-600' : ($budget->percentage_used > 80 ? 'bg-yellow-600' : 'bg-green-600') }}" 
+                                            <div class="h-2 rounded-full {{ $budget->percentage_used > 100 ? 'bg-red-600' : ($budget->percentage_used > 80 ? 'bg-yellow-600' : 'bg-green-600') }}"
                                                  style="width: {{ min($budget->percentage_used, 100) }}%"></div>
                                         </div>
+
+                                        {{-- Projected Progress (if different) --}}
+                                        @if($budget->projected_spent_amount != $budget->spent_amount)
+                                            <div class="flex items-center justify-between text-xs mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
+                                                <span class="text-gray-500 dark:text-gray-400">
+                                                    {{ __('Projected') }}: €{{ number_format($budget->projected_spent_amount, 2) }}
+                                                </span>
+                                                <span class="font-medium {{ $budget->isProjectedOverBudget() ? 'text-red-600 dark:text-red-400' : ($budget->projected_percentage_used > 80 ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400') }}">
+                                                    {{ number_format($budget->projected_percentage_used, 1) }}%
+                                                    @if($budget->isProjectedOverBudget())
+                                                        ⚠️
+                                                    @endif
+                                                </span>
+                                            </div>
+                                            <div class="w-full bg-gray-100 rounded-full h-1 mt-1 dark:bg-gray-600">
+                                                <div class="h-1 rounded-full {{ $budget->isProjectedOverBudget() ? 'bg-red-500' : ($budget->projected_percentage_used > 80 ? 'bg-yellow-500' : 'bg-blue-500') }}"
+                                                     style="width: {{ min($budget->projected_percentage_used, 100) }}%"></div>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -214,6 +234,11 @@ new class extends Component {
                                     <p class="font-medium {{ $budget->remaining_amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                                         €{{ number_format($budget->remaining_amount, 2) }}
                                     </p>
+                                    @if($budget->projected_spent_amount != $budget->spent_amount)
+                                        <p class="text-xs {{ $budget->projected_remaining_amount >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400' }}">
+                                            {{ __('Projected') }}: €{{ number_format($budget->projected_remaining_amount, 2) }}
+                                        </p>
+                                    @endif
                                 </div>
                                 
                                 <flux:dropdown>

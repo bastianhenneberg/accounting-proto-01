@@ -30,6 +30,7 @@
                     <flux:sidebar.item icon="flag" href="/goals" :current="request()->is('goals*')" wire:navigate>{{ __('Goals') }}</flux:sidebar.item>
                     <flux:sidebar.item icon="arrow-path" href="/recurring" :current="request()->is('recurring*')" wire:navigate>{{ __('Recurring') }}</flux:sidebar.item>
                     <flux:sidebar.item icon="calendar" href="/planned" :current="request()->is('planned*')" wire:navigate>{{ __('Planned') }}</flux:sidebar.item>
+                    <flux:sidebar.item icon="calendar-days" href="/financial-calendar" :current="request()->is('financial-calendar*')" wire:navigate>{{ __('Calendar') }}</flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

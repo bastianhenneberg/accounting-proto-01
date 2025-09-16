@@ -40,6 +40,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('planned', 'planned.index')->name('planned.index');
     Volt::route('planned/create', 'planned.create')->name('planned.create');
 
+    Volt::route('financial-calendar', 'financial-calendar.index')->name('financial-calendar.index');
+
     // Settings routes
     Route::redirect('settings', 'settings/profile');
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');

@@ -1,0 +1,374 @@
+# Product Requirements Document (PRD)
+# Financial Calendar Feature
+
+## 1. Overview
+
+### 1.1 Feature Summary
+The Financial Calendar provides a unified timeline view of all future financial activities, combining both planned transactions and recurring transaction patterns in an intuitive calendar interface. This enables comprehensive cash flow planning and financial oversight.
+
+### 1.2 Problem Statement
+Users currently manage planned and recurring transactions separately, making it difficult to:
+- Visualize cash flow timeline across multiple transaction types
+- Identify potential cash flow conflicts or opportunities
+- Plan around recurring payment schedules
+- See the complete financial picture for any given period
+- Coordinate planned expenses with recurring income/expenses
+
+### 1.3 Success Metrics
+- Users can plan financial decisions at least 90 days in advance
+- 90% reduction in cash flow surprises (overdrafts, insufficient funds)
+- Users report improved financial confidence and planning accuracy
+- Increased usage of planned transactions feature
+
+## 2. User Stories
+
+### 2.1 Core User Stories
+**As a user, I want to:**
+- See all upcoming financial activities (planned + recurring) in one calendar view
+- Click on any day to see detailed transaction breakdown
+- Identify cash flow patterns and potential conflicts
+- Reschedule planned transactions via drag-and-drop
+- See running balance projections day by day
+- Export calendar views for offline planning
+
+### 2.2 Acceptance Criteria
+- Calendar displays both planned and recurring transactions
+- Month, week, and day view options available
+- Visual indicators differentiate transaction types and statuses
+- Day-click reveals detailed breakdown with balance impact
+- Mobile-responsive design with touch-friendly navigation
+- Real-time updates when transactions are added/modified
+
+## 3. Technical Specifications
+
+### 3.1 Calendar Data Structure
+```php
+// Calendar Service: app/Services/FinancialCalendarService.php
+public function getCalendarData(Carbon $month, int $userId): array
+{
+    return [
+        'month' => $month->format('Y-m'),
+        'days' => [
+            '2025-09-15' => [
+                'recurring' => [
+                    ['description' => 'Salary', 'amount' => 3500, 'type' => 'income', 'account' => 'Main'],
+                    ['description' => 'Rent', 'amount' => -900, 'type' => 'expense', 'account' => 'Checking']
+                ],
+                'planned' => [
+                    ['description' => 'Car Insurance', 'amount' => -150, 'status' => 'confirmed'],
+                    ['description' => 'Birthday Gift', 'amount' => -50, 'status' => 'pending']
+                ],
+                'total_impact' => 2400,
+                'running_balance' => 5650,
+                'transaction_count' => 4
+            ],
+            // ... other days
+        ],
+        'monthly_summary' => [
+            'total_recurring_income' => 7000,
+            'total_recurring_expenses' => -2500,
+            'total_planned_income' => 200,
+            'total_planned_expenses' => -850,
+            'net_projected' => 3850
+        ]
+    ];
+}
+```
+
+### 3.2 Component Architecture
+```php
+// Main Calendar Component
+resources/views/livewire/financial-calendar/index.blade.php
+
+// Supporting Components
+resources/views/livewire/financial-calendar/day-detail.blade.php
+resources/views/livewire/financial-calendar/month-summary.blade.php
+resources/views/components/calendar/day-cell.blade.php
+resources/views/components/calendar/transaction-dot.blade.php
+```
+
+### 3.3 Database Queries Optimization
+```php
+// Efficient single query for calendar month
+public function getMonthData(Carbon $startDate, Carbon $endDate, int $userId)
+{
+    // Get all planned transactions for the period
+    $plannedTransactions = PlannedTransaction::where('user_id', $userId)
+        ->whereBetween('planned_date', [$startDate, $endDate])
+        ->whereIn('status', ['pending', 'confirmed'])
+        ->with(['account', 'category'])
+        ->get();
+
+    // Calculate recurring transaction occurrences
+    $recurringTransactions = RecurringTransaction::where('user_id', $userId)
+        ->where('is_active', true)
+        ->with(['account', 'category'])
+        ->get()
+        ->flatMap(function($recurring) use ($startDate, $endDate) {
+            return $recurring->getOccurrencesInPeriod($startDate, $endDate);
+        });
+
+    return $this->formatCalendarData($plannedTransactions, $recurringTransactions);
+}
+```
+
+## 4. User Interface Design
+
+### 4.1 Navigation Integration
+```
+Planning
+├── Goals
+├── Recurring
+├── Planned
+└── Calendar (NEW) 📅
+```
+
+### 4.2 Calendar Views
+
+#### 4.2.1 Month View (`/financial-calendar`)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ← September 2025 →                         [Month][Week][Day] │
+├─────────────────────────────────────────────────────────────┤
+│ Mon  Tue  Wed  Thu  Fri  Sat  Sun                           │
+│  2    3    4    5    6    7    8                            │
+│  9   10   11   12   13   14   15                            │
+│     🟢🔴      🔵      🟡🔴                                     │
+│ 16   17   18   19   20   21   22                            │
+│ 🔄   🔄              🔄                                       │
+│ 23   24   25   26   27   28   29                            │
+│           📅🔴                                               │
+│ 30                                                          │
+└─────────────────────────────────────────────────────────────┘
+
+Legend:
+🟢 Recurring Income    🔴 Recurring Expense
+🔵 Planned Income      🟡 Planned Expense
+📅 Confirmed Planned   🔄 Multiple Transactions
+```
+
+#### 4.2.2 Day Detail Modal
+```
+┌─────────────────────────────────────────┐
+│ Monday, September 15, 2025              │
+├─────────────────────────────────────────┤
+│ 💰 Salary (Recurring)       +€3,500.00 │
+│    Main Account • Income                │
+│                                         │
+│ 🏠 Rent (Recurring)         -€900.00   │
+│    Checking • Housing                   │
+│                                         │
+│ 🚗 Car Insurance (Planned)  -€150.00   │
+│    Savings • ✓ Confirmed               │
+├─────────────────────────────────────────┤
+│ Day Total: +€2,450.00                   │
+│ Running Balance: €5,650.00              │
+│                                         │
+│ [Quick Add Planned] [View Details]      │
+└─────────────────────────────────────────┘
+```
+
+#### 4.2.3 Month Summary Sidebar
+```
+┌─────────────────────────────────────┐
+│ September 2025 Summary              │
+├─────────────────────────────────────┤
+│ 📈 Recurring Income    +€7,000.00   │
+│ 📉 Recurring Expenses  -€2,500.00   │
+│ 📅 Planned Income      +€200.00     │
+│ 📅 Planned Expenses    -€850.00     │
+├─────────────────────────────────────┤
+│ 💰 Net Projected      +€3,850.00    │
+│                                     │
+│ 🎯 Largest Expense: Rent (-€900)    │
+│ 📊 Most Active Day: 15th (4 items)  │
+│                                     │
+│ [Export PDF] [Print]                │
+└─────────────────────────────────────┘
+```
+
+### 4.3 Visual Design Elements
+
+#### Transaction Indicators
+- **Size**: Dots scale with transaction amount
+- **Color**: Type-based (green=income, red=expense, blue=transfer)
+- **Pattern**: Solid=confirmed, dashed=pending, hollow=recurring
+- **Badge**: Numbers show count when multiple transactions
+
+#### Interactive Elements
+- **Hover**: Show transaction preview tooltip
+- **Click**: Open day detail modal
+- **Drag**: Reschedule planned transactions (future enhancement)
+- **Double-click**: Quick add transaction for that day
+
+## 5. Business Logic
+
+### 5.1 Recurring Transaction Calculation
+```php
+// Calculate next occurrences for recurring transactions
+public function getOccurrencesInPeriod(Carbon $start, Carbon $end): Collection
+{
+    $occurrences = collect();
+    $current = $this->next_execution_date->copy();
+
+    while ($current->lte($end) && $occurrences->count() < 100) {
+        if ($current->gte($start)) {
+            $occurrences->push([
+                'date' => $current->toDateString(),
+                'recurring_id' => $this->id,
+                'description' => $this->description,
+                'amount' => $this->amount,
+                'type' => $this->type,
+                'account_id' => $this->account_id,
+                'category_id' => $this->category_id,
+                'source' => 'recurring'
+            ]);
+        }
+
+        $current = $this->calculateNextOccurrence($current);
+    }
+
+    return $occurrences;
+}
+```
+
+### 5.2 Balance Projection Algorithm
+```php
+public function getRunningBalanceProjection(Carbon $date, int $userId): array
+{
+    $accounts = User::find($userId)->accounts()->active()->get();
+    $projection = [];
+
+    foreach ($accounts as $account) {
+        $runningBalance = $account->balance;
+
+        // Get all transactions up to this date
+        $transactions = $this->getTransactionsUpToDate($date, $account->id);
+
+        foreach ($transactions as $transaction) {
+            $runningBalance += $transaction['impact'];
+        }
+
+        $projection[$account->id] = $runningBalance;
+    }
+
+    return $projection;
+}
+```
+
+## 6. Implementation Plan
+
+### Phase 1: Core Calendar Structure (Day 1)
+- [ ] Create FinancialCalendarService for data aggregation
+- [ ] Build basic month view with day grid
+- [ ] Implement recurring transaction occurrence calculation
+- [ ] Add basic visual indicators for transactions
+
+### Phase 2: Interactive Features (Day 1-2)
+- [ ] Create day detail modal component
+- [ ] Add click handlers for day selection
+- [ ] Implement month navigation (prev/next)
+- [ ] Add transaction type filtering
+
+### Phase 3: Advanced Views (Day 2)
+- [ ] Implement week view for detailed planning
+- [ ] Add month summary sidebar with projections
+- [ ] Create balance projection timeline
+- [ ] Add export functionality
+
+### Phase 4: Mobile & Polish (Day 2-3)
+- [ ] Optimize for mobile touch interfaces
+- [ ] Add swipe navigation between months
+- [ ] Implement responsive design breakpoints
+- [ ] Add loading states and error handling
+
+## 7. Data Flow Architecture
+
+### 7.1 Calendar Service Layer
+```php
+app/Services/FinancialCalendarService.php
+├── getMonthData(Carbon $month, int $userId)
+├── getWeekData(Carbon $week, int $userId)
+├── getDayData(Carbon $day, int $userId)
+├── formatCalendarData(Collection $planned, Collection $recurring)
+└── calculateRunningBalances(array $transactions, array $accounts)
+```
+
+### 7.2 Frontend State Management
+```php
+// Livewire Component State
+public $currentMonth;           // Carbon instance
+public $viewMode = 'month';     // month|week|day
+public $selectedDay;            // Carbon instance for detail view
+public $calendarData = [];      // Processed calendar data
+public $monthSummary = [];      // Monthly aggregations
+public $showDayDetail = false;  // Modal visibility
+```
+
+## 8. Advanced Features (Future Enhancements)
+
+### 8.1 Drag & Drop Rescheduling
+- Drag planned transactions to different dates
+- Visual feedback during drag operations
+- Automatic validation for date constraints
+
+### 8.2 Cash Flow Analysis
+- Daily balance trend line overlay
+- Cash flow gap identification
+- Automated savings opportunity suggestions
+
+### 8.3 Integration Features
+- **Budget Impact**: Show how planned expenses affect budgets
+- **Goal Progress**: Visualize planned contributions to goals
+- **Notification System**: Alerts for upcoming large expenses
+- **Bank Integration**: Import planned transactions from bank feeds
+
+### 8.4 Export & Sharing
+- PDF export for financial advisors
+- iCal export for external calendar apps
+- Print-friendly monthly reports
+- Email digest of upcoming week
+
+## 9. Multilingual Considerations
+
+### 9.1 Calendar Localization
+- Date formats (M d, Y vs. d.m.Y)
+- Month names in selected language
+- Day abbreviations (Mon vs. Mo)
+- Currency formatting per locale
+
+### 9.2 Translation Keys
+```json
+{
+    "Financial Calendar": "Finanzkalender",
+    "Month View": "Monatsansicht",
+    "Week View": "Wochenansicht",
+    "Day View": "Tagesansicht",
+    "Running Balance": "Laufender Saldo",
+    "Recurring": "Wiederkehrend",
+    "Planned": "Geplant",
+    "Cash Flow": "Geldfluss"
+}
+```
+
+## 10. Performance Considerations
+
+### 10.1 Optimization Strategies
+- Cache calendar data for frequently viewed months
+- Lazy load transaction details only when day is clicked
+- Paginate large recurring transaction calculations
+- Use database indexes on date fields
+
+### 10.2 Loading States
+- Skeleton calendar while data loads
+- Progressive enhancement for interactive features
+- Optimistic updates for quick interactions
+
+---
+
+**Implementation Priority**: High
+**Estimated Development Time**: 2-3 days
+**Dependencies**: Planned Transactions, Recurring Transactions
+**Risk Level**: Medium (complex data aggregation and UI)
+
+**Ready to Start Implementation** 🚀

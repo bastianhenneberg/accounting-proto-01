@@ -39,20 +39,24 @@ new class extends Component {
             ->orderBy('transaction_date', 'desc')
             ->orderBy('created_at', 'desc');
 
+        // Build filtered summary query (same filters as main query)
+        $summaryQuery = auth()->user()->transactions()
+            ->when($this->search, fn($q) => $q->where('description', 'like', '%' . $this->search . '%'))
+            ->when($this->selectedAccount, fn($q) => $q->where('account_id', $this->selectedAccount))
+            ->when($this->selectedCategory, fn($q) => $q->where('category_id', $this->selectedCategory))
+            ->when($this->selectedType, fn($q) => $q->where('type', $this->selectedType))
+            ->when($this->startDate, fn($q) => $q->where('transaction_date', '>=', $this->startDate))
+            ->when($this->endDate, fn($q) => $q->where('transaction_date', '<=', $this->endDate));
+
         return [
             'transactions' => $query->paginate(20),
             'accounts' => auth()->user()->accounts()->active()->orderBy('name')->get(),
             'categories' => auth()->user()->categories()->active()->orderBy('name')->get(),
-            'totalIncome' => auth()->user()->transactions()
-                ->where('type', 'income')
-                ->when($this->startDate, fn($q) => $q->where('transaction_date', '>=', $this->startDate))
-                ->when($this->endDate, fn($q) => $q->where('transaction_date', '<=', $this->endDate))
-                ->sum('amount'),
-            'totalExpenses' => auth()->user()->transactions()
-                ->where('type', 'expense')
-                ->when($this->startDate, fn($q) => $q->where('transaction_date', '>=', $this->startDate))
-                ->when($this->endDate, fn($q) => $q->where('transaction_date', '<=', $this->endDate))
-                ->sum('amount'),
+            'totalIncome' => (clone $summaryQuery)->where('type', 'income')->sum('amount'),
+            'totalExpenses' => (clone $summaryQuery)->where('type', 'expense')->sum('amount'),
+            'filteredCount' => (clone $summaryQuery)->count(),
+            'filteredIncome' => (clone $summaryQuery)->where('type', 'income')->sum('amount'),
+            'filteredExpenses' => (clone $summaryQuery)->where('type', 'expense')->sum('amount'),
         ];
     }
 
@@ -397,6 +401,42 @@ new class extends Component {
                 </div>
             </div>
         </div>
+
+        {{-- Filtered Results Summary --}}
+        @if($search || $selectedAccount || $selectedCategory || $selectedType)
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-medium text-blue-900 dark:text-blue-100">{{ __('Filtered Results') }}</h3>
+                        <p class="text-xs text-blue-800 dark:text-blue-200">
+                            {{ __('Showing :count transactions', ['count' => $filteredCount]) }}
+                            @if($search) • {{ __('Search') }}: "{{ $search }}"@endif
+                            @if($selectedAccount) • {{ __('Account') }}: {{ $accounts->firstWhere('id', $selectedAccount)?->name }}@endif
+                            @if($selectedCategory) • {{ __('Category') }}: {{ $categories->firstWhere('id', $selectedCategory)?->name }}@endif
+                            @if($selectedType) • {{ __('Type') }}: {{ __(ucfirst($selectedType)) }}@endif
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <p class="text-blue-700 dark:text-blue-300">{{ __('Income') }}</p>
+                                <p class="font-semibold text-green-600 dark:text-green-400">+€{{ number_format($filteredIncome, 2) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-blue-700 dark:text-blue-300">{{ __('Expenses') }}</p>
+                                <p class="font-semibold text-red-600 dark:text-red-400">-€{{ number_format($filteredExpenses, 2) }}</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-blue-200 dark:border-blue-700 mt-2 pt-2">
+                            <p class="text-xs text-blue-700 dark:text-blue-300">{{ __('Net') }}</p>
+                            <p class="font-bold {{ ($filteredIncome - $filteredExpenses) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                {{ ($filteredIncome - $filteredExpenses) >= 0 ? '+' : '' }}€{{ number_format($filteredIncome - $filteredExpenses, 2) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         {{-- Transactions List --}}
         <div class="bg-white rounded-lg border border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700">

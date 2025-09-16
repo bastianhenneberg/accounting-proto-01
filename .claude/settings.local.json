@@ -6,7 +6,10 @@
       "Bash(php artisan:*)",
       "Bash(git add:*)",
       "Bash(git merge:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   },
