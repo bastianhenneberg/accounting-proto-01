@@ -67,7 +67,7 @@ new class extends Component {
         $recurring->update(['is_active' => !$recurring->is_active]);
         
         $status = $recurring->is_active ? 'activated' : 'deactivated';
-        session()->flash('success', "Recurring transaction {$status} successfully.");
+        session()->flash('success', __('Recurring transaction :status successfully.', ['status' => $status]));
     }
 
     public function processRecurring($recurringId): void
@@ -87,7 +87,7 @@ new class extends Component {
         // Update next occurrence date
         $recurring->updateNextOccurrence();
         
-        session()->flash('success', 'Recurring transaction processed successfully.');
+        session()->flash('success', __('Recurring transaction processed successfully.'));
     }
 
     public function updatedSearch(): void
@@ -130,12 +130,11 @@ new class extends Component {
 <div class="p-6">
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Recurring Transactions</h1>
-            <p class="text-gray-600 dark:text-gray-400">Manage your automatic income and expenses</p>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ __('Recurring Transactions') }}</h1>
+            <p class="text-gray-600 dark:text-gray-400">{{ __('Manage your automatic income and expenses') }}</p>
         </div>
-        <flux:button href="/recurring/create" variant="primary" wire:navigate>
-            <flux:icon.plus class="w-4 h-4 mr-2" />
-            Add Recurring
+        <flux:button href="/recurring/create" variant="primary" icon="plus" wire:navigate>
+            {{ __('Add Recurring') }}
         </flux:button>
     </div>
 
@@ -147,7 +146,7 @@ new class extends Component {
                     <flux:icon.arrow-path class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Active Recurring</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Active Recurring') }}</p>
                     <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ $totalRecurring }}</p>
                 </div>
             </div>
@@ -159,7 +158,7 @@ new class extends Component {
                     <flux:icon.clock class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Due Now</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Due Now') }}</p>
                     <p class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">{{ $dueCount }}</p>
                 </div>
             </div>
@@ -171,7 +170,7 @@ new class extends Component {
                     <flux:icon.arrow-up class="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Monthly Income</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Monthly Income') }}</p>
                     <p class="text-lg font-semibold text-green-600 dark:text-green-400">€{{ number_format($monthlyIncome, 2) }}</p>
                 </div>
             </div>
@@ -183,7 +182,7 @@ new class extends Component {
                     <flux:icon.arrow-down class="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Monthly Expenses</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Monthly Expenses') }}</p>
                     <p class="text-lg font-semibold text-red-600 dark:text-red-400">€{{ number_format($monthlyExpenses, 2) }}</p>
                 </div>
             </div>
@@ -194,12 +193,12 @@ new class extends Component {
     <div class="bg-white rounded-lg border border-neutral-200 p-4 mb-6 dark:bg-neutral-800 dark:border-neutral-700">
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
             <div>
-                <flux:input wire:model.live="search" placeholder="Search descriptions..." />
+                <flux:input wire:model.live="search" :placeholder="__('Search descriptions...')" />
             </div>
             
             <div>
-                <flux:select wire:model.live="selectedAccount" placeholder="All Accounts">
-                    <option value="">All Accounts</option>
+                <flux:select wire:model.live="selectedAccount" :placeholder="__('All Accounts')">
+                    <option value="">{{ __('All Accounts') }}</option>
                     @foreach($accounts as $account)
                         <option value="{{ $account->id }}">{{ $account->name }}</option>
                     @endforeach
@@ -207,8 +206,8 @@ new class extends Component {
             </div>
             
             <div>
-                <flux:select wire:model.live="selectedCategory" placeholder="All Categories">
-                    <option value="">All Categories</option>
+                <flux:select wire:model.live="selectedCategory" :placeholder="__('All Categories')">
+                    <option value="">{{ __('All Categories') }}</option>
                     @foreach($categories as $category)
                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                     @endforeach
@@ -216,37 +215,37 @@ new class extends Component {
             </div>
             
             <div>
-                <flux:select wire:model.live="selectedType" placeholder="All Types">
-                    <option value="">All Types</option>
-                    <option value="income">Income</option>
-                    <option value="expense">Expense</option>
+                <flux:select wire:model.live="selectedType" :placeholder="__('All Types')">
+                    <option value="">{{ __('All Types') }}</option>
+                    <option value="income">{{ __('Income') }}</option>
+                    <option value="expense">{{ __('Expense') }}</option>
                 </flux:select>
             </div>
             
             <div>
-                <flux:select wire:model.live="selectedFrequency" placeholder="All Frequencies">
-                    <option value="">All Frequencies</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
+                <flux:select wire:model.live="selectedFrequency" :placeholder="__('All Frequencies')">
+                    <option value="">{{ __('All Frequencies') }}</option>
+                    <option value="daily">{{ __('Daily') }}</option>
+                    <option value="weekly">{{ __('Weekly') }}</option>
+                    <option value="monthly">{{ __('Monthly') }}</option>
+                    <option value="quarterly">{{ __('Quarterly') }}</option>
+                    <option value="yearly">{{ __('Yearly') }}</option>
                 </flux:select>
             </div>
             
             <div>
-                <flux:select wire:model.live="selectedStatus" placeholder="All Statuses">
-                    <option value="">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="due">Due Now</option>
+                <flux:select wire:model.live="selectedStatus" :placeholder="__('All Statuses')">
+                    <option value="">{{ __('All Statuses') }}</option>
+                    <option value="active">{{ __('Active') }}</option>
+                    <option value="inactive">{{ __('Inactive') }}</option>
+                    <option value="due">{{ __('Due Now') }}</option>
                 </flux:select>
             </div>
         </div>
         
         <div class="mt-4">
             <flux:button wire:click="clearFilters" variant="ghost" size="sm">
-                Clear All Filters
+                {{ __('Clear All Filters') }}
             </flux:button>
         </div>
     </div>
@@ -321,10 +320,10 @@ new class extends Component {
                                 @if($isDue && $recurring->is_active)
                                     <flux:button 
                                         wire:click="processRecurring({{ $recurring->id }})"
-                                        wire:confirm="Process this recurring transaction now?"
+                                        wire:confirm="{{ __('Process this recurring transaction now?') }}"
                                         variant="primary" 
                                         size="sm">
-                                        Process Now
+                                        {{ __('Process Now') }}
                                     </flux:button>
                                 @endif
                                 
@@ -333,10 +332,10 @@ new class extends Component {
                                     
                                     <flux:menu>
                                         <flux:menu.item href="/recurring/{{ $recurring->id }}" icon="eye" wire:navigate>
-                                            View Details
+                                            {{ __('View Details') }}
                                         </flux:menu.item>
                                         <flux:menu.item href="/recurring/{{ $recurring->id }}/edit" icon="pencil" wire:navigate>
-                                            Edit
+                                            {{ __('Edit') }}
                                         </flux:menu.item>
                                         <flux:menu.item 
                                             wire:click="toggleStatus({{ $recurring->id }})"
@@ -346,9 +345,9 @@ new class extends Component {
                                         @if($recurring->is_active)
                                             <flux:menu.item 
                                                 wire:click="processRecurring({{ $recurring->id }})"
-                                                wire:confirm="Process this recurring transaction now?"
+                                                wire:confirm="{{ __('Process this recurring transaction now?') }}"
                                                 icon="play">
-                                                Process Now
+                                                {{ __('Process Now') }}
                                             </flux:menu.item>
                                         @endif
                                         <flux:menu.separator />
@@ -373,11 +372,10 @@ new class extends Component {
         @else
             <div class="p-12 text-center">
                 <flux:icon.arrow-path class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No recurring transactions found</h3>
-                <p class="text-gray-500 dark:text-gray-400 mb-6">Automate your finances by setting up recurring income and expenses</p>
-                <flux:button href="/recurring/create" variant="primary" wire:navigate>
-                    <flux:icon.plus class="w-4 h-4 mr-2" />
-                    Create Your First Recurring Transaction
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ __('No recurring transactions found') }}</h3>
+                <p class="text-gray-500 dark:text-gray-400 mb-6">{{ __('Automate your finances by setting up recurring income and expenses') }}</p>
+                <flux:button href="/recurring/create" variant="primary" icon="plus" wire:navigate>
+                    {{ __('Create Your First Recurring Transaction') }}
                 </flux:button>
             </div>
         @endif

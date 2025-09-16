@@ -28,13 +28,6 @@ new class extends Component {
 
     public function deleteTransaction(): void
     {
-        // Update account balance
-        if ($this->transaction->type === 'income') {
-            $this->transaction->account->decrement('balance', $this->transaction->amount);
-        } else {
-            $this->transaction->account->increment('balance', $this->transaction->amount);
-        }
-
         $this->transaction->delete();
         
         session()->flash('success', 'Transaction deleted successfully.');
@@ -64,7 +57,7 @@ new class extends Component {
                 </flux:button>
                 <flux:button 
                     wire:click="deleteTransaction"
-                    wire:confirm="Are you sure you want to delete this transaction? This action cannot be undone."
+                    wire:confirm="{{ __('Are you sure you want to delete this transaction? This action cannot be undone.') }}"
                     variant="danger">
                     <flux:icon.trash class="w-4 h-4 mr-2" />
                     Delete

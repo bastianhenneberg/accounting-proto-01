@@ -50,7 +50,7 @@ new class extends Component {
         $this->showCreateForm = false;
         $this->loadCategories();
         
-        session()->flash('success', 'Category created successfully.');
+        session()->flash('success', __('Category created successfully.'));
     }
 
     public function deleteCategory($categoryId): void
@@ -58,18 +58,18 @@ new class extends Component {
         $category = auth()->user()->categories()->findOrFail($categoryId);
         
         if ($category->transactions()->count() > 0) {
-            session()->flash('error', 'Cannot delete category with existing transactions.');
+            session()->flash('error', __('Cannot delete category with existing transactions.'));
             return;
         }
         
         if ($category->children()->count() > 0) {
-            session()->flash('error', 'Cannot delete category with subcategories.');
+            session()->flash('error', __('Cannot delete category with subcategories.'));
             return;
         }
         
         $category->delete();
         $this->loadCategories();
-        session()->flash('success', 'Category deleted successfully.');
+        session()->flash('success', __('Category deleted successfully.'));
     }
 
     public function getParentCategories(): array
@@ -94,28 +94,28 @@ new class extends Component {
 <div class="p-6">
         <div class="flex items-center justify-between mb-6">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Categories</h1>
-                <p class="text-gray-600 dark:text-gray-400">Organize your income and expenses</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ __('Categories') }}</h1>
+                <p class="text-gray-600 dark:text-gray-400">{{ __('Organize your income and expenses') }}</p>
             </div>
             <flux:button wire:click="$toggle('showCreateForm')" variant="primary" icon="plus">
-                Add Category
+                {{ __('Add Category') }}
             </flux:button>
         </div>
 
         {{-- Create Form --}}
         @if($showCreateForm)
             <div class="bg-white rounded-lg border border-neutral-200 p-6 mb-6 dark:bg-neutral-800 dark:border-neutral-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create New Category</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Create New Category') }}</h3>
                 
                 <form wire:submit="createCategory" class="space-y-4">
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
-                            <flux:input wire:model="name" label="Category Name" placeholder="e.g., Groceries, Salary" required />
+                            <flux:input wire:model="name" :label="__('Category Name')" :placeholder="__('e.g., Groceries, Salary')" required />
                         </div>
                         <div>
-                            <flux:select wire:model="type" label="Type" required>
-                                <option value="expense">Expense</option>
-                                <option value="income">Income</option>
+                            <flux:select wire:model="type" :label="__('Type')" required>
+                                <option value="expense">{{ __('Expense') }}</option>
+                                <option value="income">{{ __('Income') }}</option>
                             </flux:select>
                         </div>
                     </div>

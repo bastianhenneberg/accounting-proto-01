@@ -60,8 +60,8 @@ new class extends Component {
     {
         $transaction = auth()->user()->transactions()->findOrFail($transactionId);
         $transaction->delete();
-        
-        session()->flash('success', 'Transaction deleted successfully.');
+
+        session()->flash('success', __('Transaction deleted successfully.'));
     }
 
     public function updatedSearch(): void
@@ -116,15 +116,15 @@ new class extends Component {
             
             // CSV Header
             fputcsv($file, [
-                'Date',
-                'Description',
-                'Account',
-                'Category',
-                'Type',
-                'Amount',
-                'Tags',
-                'Reference Number',
-                'Notes'
+                __('Date'),
+                __('Description'),
+                __('Account'),
+                __('Category'),
+                __('Type'),
+                __('Amount'),
+                __('Tags'),
+                __('Reference Number'),
+                __('Notes')
             ]);
 
             // CSV Data
@@ -158,7 +158,7 @@ new class extends Component {
         $data = array_map('str_getcsv', file($path));
         
         if (empty($data)) {
-            session()->flash('error', 'CSV file is empty.');
+            session()->flash('error', __('CSV file is empty.'));
             $this->reset(['importFile', 'showImportModal']);
             return;
         }
@@ -170,7 +170,7 @@ new class extends Component {
         $missingColumns = array_diff($requiredColumns, $header);
         
         if (!empty($missingColumns)) {
-            session()->flash('error', 'Missing required columns: ' . implode(', ', $missingColumns));
+            session()->flash('error', __('Missing required columns: :columns', ['columns' => implode(', ', $missingColumns)]));
             $this->reset(['importFile', 'showImportModal']);
             return;
         }
@@ -189,13 +189,13 @@ new class extends Component {
                 
                 // Validate date
                 if (empty($rowData['Date']) || !strtotime($rowData['Date'])) {
-                    $errors[] = "Row " . ($index + 2) . ": Invalid or missing date";
+                    $errors[] = __('Row :row: Invalid or missing date', ['row' => ($index + 2)]);
                     continue;
                 }
                 
                 // Validate amount
                 if (empty($rowData['Amount']) || !is_numeric($rowData['Amount']) || floatval($rowData['Amount']) <= 0) {
-                    $errors[] = "Row " . ($index + 2) . ": Invalid or missing amount";
+                    $errors[] = __('Row :row: Invalid or missing amount', ['row' => ($index + 2)]);
                     continue;
                 }
                 
@@ -205,7 +205,7 @@ new class extends Component {
                     ->first();
                 
                 if (!$account) {
-                    $errors[] = "Row " . ($index + 2) . ": Account '" . ($rowData['Account'] ?? 'N/A') . "' not found";
+                    $errors[] = __('Row :row: Account ":account" not found', ['row' => ($index + 2), 'account' => ($rowData['Account'] ?? 'N/A')]);
                     continue;
                 }
 
@@ -215,14 +215,14 @@ new class extends Component {
                     ->first();
                 
                 if (!$category) {
-                    $errors[] = "Row " . ($index + 2) . ": Category '" . ($rowData['Category'] ?? 'N/A') . "' not found";
+                    $errors[] = __('Row :row: Category ":category" not found', ['row' => ($index + 2), 'category' => ($rowData['Category'] ?? 'N/A')]);
                     continue;
                 }
 
                 // Validate type
                 $type = strtolower(trim($rowData['Type'] ?? 'expense'));
                 if (!in_array($type, ['income', 'expense', 'transfer'])) {
-                    $errors[] = "Row " . ($index + 2) . ": Invalid type '" . $type . "'. Must be income, expense, or transfer";
+                    $errors[] = __('Row :row: Invalid type ":type". Must be income, expense, or transfer', ['row' => ($index + 2), 'type' => $type]);
                     continue;
                 }
 
@@ -261,22 +261,22 @@ new class extends Component {
                 $imported++;
                 
             } catch (\Exception $e) {
-                $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
+                $errors[] = __('Row :row: :message', ['row' => ($index + 2), 'message' => $e->getMessage()]);
             }
         }
 
         $this->reset(['importFile', 'showImportModal']);
 
         if (count($errors) > 0) {
-            $errorMessage = "Imported {$imported} transactions with " . count($errors) . " errors.";
+            $errorMessage = __('Imported :imported transactions with :errors errors.', ['imported' => $imported, 'errors' => count($errors)]);
             if (count($errors) <= 5) {
-                $errorMessage .= " Errors: " . implode('; ', $errors);
+                $errorMessage .= ' ' . __('Errors: :errors', ['errors' => implode('; ', $errors)]);
             } else {
-                $errorMessage .= " First 5 errors: " . implode('; ', array_slice($errors, 0, 5)) . '...';
+                $errorMessage .= ' ' . __('First 5 errors: :errors', ['errors' => implode('; ', array_slice($errors, 0, 5)) . '...']);
             }
             session()->flash('warning', $errorMessage);
         } else {
-            session()->flash('success', "Successfully imported {$imported} transactions.");
+            session()->flash('success', __('Successfully imported :count transactions.', ['count' => $imported]));
         }
     }
 }; ?>
@@ -284,28 +284,28 @@ new class extends Component {
 <div class="p-6">
         <div class="flex items-center justify-between mb-6">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
-                <p class="text-gray-600 dark:text-gray-400">Track all your income and expenses</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ __('Transactions') }}</h1>
+                <p class="text-gray-600 dark:text-gray-400">{{ __('Track all your income and expenses') }}</p>
             </div>
             <div class="flex space-x-2">
                 <flux:dropdown>
                     <flux:button variant="outline" icon="arrow-down-tray">
-                        Import/Export
+                        {{ __('Import/Export') }}
                     </flux:button>
                     
                     <flux:menu>
                         <flux:menu.item wire:click="exportCsv" icon="arrow-down-tray">
-                            Export CSV
+                            {{ __('Export CSV') }}
                         </flux:menu.item>
                         <flux:menu.separator />
                         <flux:menu.item wire:click="$set('showImportModal', true)" icon="arrow-up-tray">
-                            Import CSV
+                            {{ __('Import CSV') }}
                         </flux:menu.item>
                     </flux:menu>
                 </flux:dropdown>
                 
                 <flux:button href="/transactions/create" variant="primary" icon="plus" wire:navigate>
-                    Add Transaction
+                    {{ __('Add Transaction') }}
                 </flux:button>
             </div>
         </div>
@@ -318,7 +318,7 @@ new class extends Component {
                         <flux:icon.arrow-up class="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Total Income</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Total Income') }}</p>
                         <p class="text-lg font-semibold text-green-600 dark:text-green-400">€{{ number_format($totalIncome, 2) }}</p>
                     </div>
                 </div>
@@ -330,7 +330,7 @@ new class extends Component {
                         <flux:icon.arrow-down class="w-5 h-5 text-red-600 dark:text-red-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Total Expenses') }}</p>
                         <p class="text-lg font-semibold text-red-600 dark:text-red-400">€{{ number_format($totalExpenses, 2) }}</p>
                     </div>
                 </div>
@@ -342,7 +342,7 @@ new class extends Component {
                         <flux:icon.calculator class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Net Amount</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Net Amount') }}</p>
                         <p class="text-lg font-semibold {{ ($totalIncome - $totalExpenses) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                             €{{ number_format($totalIncome - $totalExpenses, 2) }}
                         </p>
@@ -355,12 +355,12 @@ new class extends Component {
         <div class="bg-white rounded-lg border border-neutral-200 p-4 mb-6 dark:bg-neutral-800 dark:border-neutral-700">
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
                 <div>
-                    <flux:input wire:model.live="search" placeholder="Search descriptions..." />
+                    <flux:input wire:model.live="search" placeholder="{{ __('Search descriptions...') }}" />
                 </div>
                 
                 <div>
-                    <flux:select wire:model.live="selectedAccount" placeholder="All Accounts">
-                        <option value="">All Accounts</option>
+                    <flux:select wire:model.live="selectedAccount" placeholder="{{ __('All Accounts') }}">
+                        <option value="">{{ __('All Accounts') }}</option>
                         @foreach($accounts as $account)
                             <option value="{{ $account->id }}">{{ $account->name }}</option>
                         @endforeach
@@ -368,8 +368,8 @@ new class extends Component {
                 </div>
                 
                 <div>
-                    <flux:select wire:model.live="selectedCategory" placeholder="All Categories">
-                        <option value="">All Categories</option>
+                    <flux:select wire:model.live="selectedCategory" placeholder="{{ __('All Categories') }}">
+                        <option value="">{{ __('All Categories') }}</option>
                         @foreach($categories as $category)
                             <option value="{{ $category->id }}">{{ $category->name }}</option>
                         @endforeach
@@ -377,11 +377,11 @@ new class extends Component {
                 </div>
                 
                 <div>
-                    <flux:select wire:model.live="selectedType" placeholder="All Types">
-                        <option value="">All Types</option>
-                        <option value="income">Income</option>
-                        <option value="expense">Expense</option>
-                        <option value="transfer">Transfer</option>
+                    <flux:select wire:model.live="selectedType" placeholder="{{ __('All Types') }}">
+                        <option value="">{{ __('All Types') }}</option>
+                        <option value="income">{{ __('Income') }}</option>
+                        <option value="expense">{{ __('Expense') }}</option>
+                        <option value="transfer">{{ __('Transfer') }}</option>
                     </flux:select>
                 </div>
                 
@@ -392,7 +392,7 @@ new class extends Component {
                 <div class="flex items-end space-x-2">
                     <flux:input wire:model.live="endDate" type="date" class="flex-1" />
                     <flux:button wire:click="clearFilters" variant="ghost" size="sm">
-                        Clear
+                        {{ __('Clear') }}
                     </flux:button>
                 </div>
             </div>
@@ -452,15 +452,15 @@ new class extends Component {
                                         
                                         <flux:menu>
                                             <flux:menu.item href="/transactions/{{ $transaction->id }}" icon="eye" wire:navigate>
-                                                View Details
+                                                {{ __('View Details') }}
                                             </flux:menu.item>
                                             <flux:menu.separator />
                                             <flux:menu.item 
                                                 wire:click="deleteTransaction({{ $transaction->id }})"
-                                                wire:confirm="Are you sure you want to delete this transaction?"
+                                                wire:confirm="{{ __('Are you sure you want to delete this transaction?') }}"
                                                 icon="trash" 
                                                 variant="danger">
-                                                Delete
+                                                {{ __('Delete') }}
                                             </flux:menu.item>
                                         </flux:menu>
                                     </flux:dropdown>
@@ -478,10 +478,10 @@ new class extends Component {
             @else
                 <div class="p-12 text-center">
                     <flux:icon.banknotes class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No transactions found</h3>
-                    <p class="text-gray-500 dark:text-gray-400 mb-6">Start tracking your finances by adding transactions</p>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ __('No transactions found') }}</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">{{ __('Start tracking your finances by adding transactions') }}</p>
                     <flux:button href="/transactions/create" variant="primary" icon="plus" wire:navigate>
-                        Add Your First Transaction
+                        {{ __('Add Your First Transaction') }}
                     </flux:button>
                 </div>
             @endif
@@ -491,13 +491,13 @@ new class extends Component {
     @if($showImportModal)
         <flux:modal name="import-modal" class="space-y-6">
             <div>
-                <flux:heading size="lg">Import Transactions</flux:heading>
-                <flux:subheading>Upload a CSV file to import transactions</flux:subheading>
+                <flux:heading size="lg">{{ __('Import Transactions') }}</flux:heading>
+                <flux:subheading>{{ __('Upload a CSV file to import transactions') }}</flux:subheading>
             </div>
 
             <div class="space-y-4">
                 <div>
-                    <flux:label>CSV File</flux:label>
+                    <flux:label>{{ __('CSV File') }}</flux:label>
                     <flux:input type="file" wire:model="importFile" accept=".csv,.txt" />
                     @error('importFile') 
                         <flux:error>{{ $message }}</flux:error> 
@@ -505,27 +505,27 @@ new class extends Component {
                 </div>
 
                 <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-2">CSV Format Requirements:</h4>
+                    <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-2">{{ __('CSV Format Requirements:') }}</h4>
                     <ul class="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                        <li>• <strong>Date:</strong> YYYY-MM-DD format</li>
-                        <li>• <strong>Description:</strong> Transaction description</li>
-                        <li>• <strong>Account:</strong> Must match existing account name</li>
-                        <li>• <strong>Category:</strong> Must match existing category name</li>
-                        <li>• <strong>Type:</strong> income, expense, or transfer</li>
-                        <li>• <strong>Amount:</strong> Numeric value (positive)</li>
-                        <li>• <strong>Tags:</strong> Comma-separated tag names (optional)</li>
-                        <li>• <strong>Reference Number:</strong> Optional reference</li>
-                        <li>• <strong>Notes:</strong> Optional notes</li>
+                        <li>• <strong>{{ __('Date:') }}</strong> {{ __('YYYY-MM-DD format') }}</li>
+                        <li>• <strong>{{ __('Description:') }}</strong> {{ __('Transaction description') }}</li>
+                        <li>• <strong>{{ __('Account:') }}</strong> {{ __('Must match existing account name') }}</li>
+                        <li>• <strong>{{ __('Category:') }}</strong> {{ __('Must match existing category name') }}</li>
+                        <li>• <strong>{{ __('Type:') }}</strong> {{ __('income, expense, or transfer') }}</li>
+                        <li>• <strong>{{ __('Amount:') }}</strong> {{ __('Numeric value (positive)') }}</li>
+                        <li>• <strong>{{ __('Tags:') }}</strong> {{ __('Comma-separated tag names (optional)') }}</li>
+                        <li>• <strong>{{ __('Reference Number:') }}</strong> {{ __('Optional reference') }}</li>
+                        <li>• <strong>{{ __('Notes:') }}</strong> {{ __('Optional notes') }}</li>
                     </ul>
                 </div>
             </div>
 
             <div class="flex space-x-2">
                 <flux:button wire:click="importCsv" variant="primary" :disabled="!$importFile">
-                    Import Transactions
+                    {{ __('Import Transactions') }}
                 </flux:button>
                 <flux:button wire:click="$set('showImportModal', false)" variant="ghost">
-                    Cancel
+                    {{ __('Cancel') }}
                 </flux:button>
             </div>
         </flux:modal>

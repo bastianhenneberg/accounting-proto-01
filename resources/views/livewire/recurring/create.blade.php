@@ -46,7 +46,7 @@ new class extends Component {
             'next_execution_date' => $validated['start_date'],
         ]);
 
-        session()->flash('success', 'Recurring transaction created successfully.');
+        session()->flash('success', __('Recurring transaction created successfully.'));
         $this->redirect('/recurring', navigate: true);
     }
 
@@ -62,11 +62,11 @@ new class extends Component {
     public function getFrequencyOptions(): array
     {
         return [
-            'daily' => 'Daily',
-            'weekly' => 'Weekly',
-            'monthly' => 'Monthly',
-            'quarterly' => 'Quarterly',
-            'yearly' => 'Yearly',
+            'daily' => __('Daily'),
+            'weekly' => __('Weekly'),
+            'monthly' => __('Monthly'),
+            'quarterly' => __('Quarterly'),
+            'yearly' => __('Yearly'),
         ];
     }
 
@@ -104,15 +104,15 @@ new class extends Component {
 <div class="p-6">
     <div class="max-w-2xl mx-auto">
         <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create Recurring Transaction</h1>
-            <p class="text-gray-600 dark:text-gray-400">Set up automatic income or expense transactions</p>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ __('Create Recurring Transaction') }}</h1>
+            <p class="text-gray-600 dark:text-gray-400">{{ __('Set up automatic income or expense transactions') }}</p>
         </div>
 
         <div class="bg-white rounded-lg border border-neutral-200 p-6 dark:bg-neutral-800 dark:border-neutral-700">
             <form wire:submit="save" class="space-y-6">
                 {{-- Transaction Type --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Transaction Type</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ __('Transaction Type') }}</label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="flex items-center p-4 border rounded-lg cursor-pointer {{ $type === 'income' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-300 dark:border-gray-600' }}">
                             <input type="radio" wire:model.live="type" value="income" class="sr-only">
@@ -121,8 +121,8 @@ new class extends Component {
                                     <flux:icon.arrow-up class="w-5 h-5 {{ $type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-gray-400' }}" />
                                 </div>
                                 <div>
-                                    <p class="font-medium {{ $type === 'income' ? 'text-green-900 dark:text-green-100' : 'text-gray-900 dark:text-white' }}">Income</p>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Recurring money coming in</p>
+                                    <p class="font-medium {{ $type === 'income' ? 'text-green-900 dark:text-green-100' : 'text-gray-900 dark:text-white' }}">{{ __('Income') }}</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Recurring money coming in') }}</p>
                                 </div>
                             </div>
                         </label>
@@ -134,8 +134,8 @@ new class extends Component {
                                     <flux:icon.arrow-down class="w-5 h-5 {{ $type === 'expense' ? 'text-red-600 dark:text-red-400' : 'text-gray-400' }}" />
                                 </div>
                                 <div>
-                                    <p class="font-medium {{ $type === 'expense' ? 'text-red-900 dark:text-red-100' : 'text-gray-900 dark:text-white' }}">Expense</p>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Recurring money going out</p>
+                                    <p class="font-medium {{ $type === 'expense' ? 'text-red-900 dark:text-red-100' : 'text-gray-900 dark:text-white' }}">{{ __('Expense') }}</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Recurring money going out') }}</p>
                                 </div>
                             </div>
                         </label>
@@ -146,8 +146,8 @@ new class extends Component {
                 <div>
                     <flux:input 
                         wire:model="description" 
-                        label="Description" 
-                        placeholder="e.g., Monthly Salary, Rent Payment, Netflix Subscription"
+:label="__('Description')" 
+:placeholder="__('e.g., Monthly Salary, Rent Payment, Netflix Subscription')"
                         required 
                     />
                 </div>
@@ -157,7 +157,7 @@ new class extends Component {
                     <div>
                         <flux:input 
                             wire:model="amount" 
-                            label="Amount" 
+:label="__('Amount')" 
                             type="number" 
                             step="0.01"
                             min="0.01"
@@ -165,8 +165,8 @@ new class extends Component {
                         />
                     </div>
                     <div>
-                        <flux:select wire:model="account_id" label="Account" required>
-                            <option value="">Select Account</option>
+                        <flux:select wire:model="account_id" :label="__('Account')" required>
+                            <option value="">{{ __('Select Account') }}</option>
                             @foreach($accounts as $account)
                                 <option value="{{ $account->id }}">{{ $account->name }}</option>
                             @endforeach
@@ -176,8 +176,8 @@ new class extends Component {
 
                 {{-- Category --}}
                 <div>
-                    <flux:select wire:model="category_id" label="Category" required>
-                        <option value="">Select Category</option>
+                    <flux:select wire:model="category_id" :label="__('Category')" required>
+                        <option value="">{{ __('Select Category') }}</option>
                         @if($type === 'income')
                             @foreach($incomeCategories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -192,7 +192,7 @@ new class extends Component {
 
                 {{-- Frequency --}}
                 <div>
-                    <flux:select wire:model.live="frequency" label="Frequency" required>
+                    <flux:select wire:model.live="frequency" :label="__('Frequency')" required>
                         @foreach($this->getFrequencyOptions() as $value => $label)
                             <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
@@ -202,11 +202,11 @@ new class extends Component {
                 {{-- Date Range --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <flux:input wire:model.live="start_date" label="Start Date" type="date" required />
+                        <flux:input wire:model.live="start_date" :label="__('Start Date')" type="date" required />
                     </div>
                     <div>
-                        <flux:input wire:model="end_date" label="End Date (Optional)" type="date" />
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for no end date</p>
+                        <flux:input wire:model="end_date" :label="__('End Date (Optional)')" type="date" />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Leave empty for no end date') }}</p>
                     </div>
                 </div>
 
@@ -214,14 +214,14 @@ new class extends Component {
                 <div class="flex items-center space-x-3">
                     <flux:checkbox wire:model="is_active" />
                     <div>
-                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Start Active</label>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Begin processing this recurring transaction immediately</p>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Start Active') }}</label>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Begin processing this recurring transaction immediately') }}</p>
                     </div>
                 </div>
 
                 {{-- Preview Section --}}
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Preview</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ __('Preview') }}</h3>
                     
                     <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
                         <div class="flex items-center space-x-3">
@@ -234,20 +234,20 @@ new class extends Component {
                             </div>
                             <div class="flex-1">
                                 <h4 class="font-medium text-gray-900 dark:text-white">
-                                    {{ $description ?: 'Transaction Description' }}
+                                    {{ $description ?: __('Transaction Description') }}
                                 </h4>
                                 <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                                    <span>{{ $accounts->firstWhere('id', $account_id)?->name ?? 'Select Account' }}</span>
+                                    <span>{{ $accounts->firstWhere('id', $account_id)?->name ?? __('Select Account') }}</span>
                                     <span>•</span>
                                     <span class="capitalize">{{ $frequency }}</span>
                                     @if($start_date)
                                         <span>•</span>
-                                        <span>Starts {{ \Carbon\Carbon::parse($start_date)->format('M d, Y') }}</span>
+                                        <span>{{ __('Starts') }} {{ \Carbon\Carbon::parse($start_date)->format('M d, Y') }}</span>
                                     @endif
                                 </div>
                                 @if($start_date && $frequency)
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        Next occurrence: {{ $this->getNextOccurrencePreview() }}
+                                        {{ __('Next occurrence') }}: {{ $this->getNextOccurrencePreview() }}
                                     </p>
                                 @endif
                             </div>
@@ -255,7 +255,7 @@ new class extends Component {
                                 <p class="font-bold {{ $type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                                     {{ $type === 'income' ? '+' : '-' }}€{{ number_format((float)$amount, 2) }}
                                 </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">per {{ $frequency }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('per') }} {{ __($frequency) }}</p>
                             </div>
                         </div>
                     </div>
@@ -264,10 +264,10 @@ new class extends Component {
                 {{-- Form Actions --}}
                 <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <flux:button variant="ghost" href="/recurring" wire:navigate>
-                        Cancel
+                        {{ __('Cancel') }}
                     </flux:button>
                     <flux:button type="submit" variant="primary">
-                        Create Recurring Transaction
+                        {{ __('Create Recurring Transaction') }}
                     </flux:button>
                 </div>
             </form>

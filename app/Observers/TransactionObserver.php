@@ -9,15 +9,19 @@ class TransactionObserver
 {
     public function created(Transaction $transaction): void
     {
+        $this->updateAccountBalance($transaction, 'create');
         $this->updateBudgets($transaction);
     }
 
     public function updated(Transaction $transaction): void
     {
+        // Handle account balance updates for changes
+        $this->updateAccountBalanceForUpdate($transaction);
+
         // Get the original category before update
         $originalCategoryId = $transaction->getOriginal('category_id');
         $originalAmount = $transaction->getOriginal('amount');
-        
+
         // If category or amount changed, update both old and new budgets
         if ($originalCategoryId !== $transaction->category_id || $originalAmount !== $transaction->amount) {
             // Update budgets for the old category
@@ -25,13 +29,14 @@ class TransactionObserver
                 $this->updateBudgetsForCategory($transaction->user_id, $originalCategoryId);
             }
         }
-        
+
         // Update budgets for current category
         $this->updateBudgets($transaction);
     }
 
     public function deleted(Transaction $transaction): void
     {
+        $this->updateAccountBalance($transaction, 'delete');
         $this->updateBudgets($transaction);
     }
 
@@ -70,5 +75,63 @@ class TransactionObserver
 
         // Update the budget's spent amount
         $budget->update(['spent_amount' => $spentAmount]);
+    }
+
+    private function updateAccountBalance(Transaction $transaction, string $action): void
+    {
+        if (!$transaction->account) {
+            return;
+        }
+
+        if ($action === 'create') {
+            // When creating: income increases balance, expense decreases balance
+            if ($transaction->type === 'income') {
+                $transaction->account->increment('balance', $transaction->amount);
+            } else {
+                $transaction->account->decrement('balance', $transaction->amount);
+            }
+        } elseif ($action === 'delete') {
+            // When deleting: reverse the original transaction
+            if ($transaction->type === 'income') {
+                $transaction->account->decrement('balance', $transaction->amount);
+            } else {
+                $transaction->account->increment('balance', $transaction->amount);
+            }
+        }
+    }
+
+    private function updateAccountBalanceForUpdate(Transaction $transaction): void
+    {
+        // Get original values
+        $originalAccountId = $transaction->getOriginal('account_id');
+        $originalType = $transaction->getOriginal('type');
+        $originalAmount = $transaction->getOriginal('amount');
+
+        // If account, type, or amount changed, we need to update balances
+        if ($originalAccountId !== $transaction->account_id ||
+            $originalType !== $transaction->type ||
+            $originalAmount !== $transaction->amount) {
+
+            // Reverse the original transaction effect
+            if ($originalAccountId) {
+                $originalAccount = $transaction->user->accounts()->find($originalAccountId);
+                if ($originalAccount) {
+                    if ($originalType === 'income') {
+                        $originalAccount->decrement('balance', $originalAmount);
+                    } else {
+                        $originalAccount->increment('balance', $originalAmount);
+                    }
+                }
+            }
+
+            // Apply the new transaction effect
+            if ($transaction->account) {
+                if ($transaction->type === 'income') {
+                    $transaction->account->increment('balance', $transaction->amount);
+                } else {
+                    $transaction->account->decrement('balance', $transaction->amount);
+                }
+            }
+        }
     }
 }

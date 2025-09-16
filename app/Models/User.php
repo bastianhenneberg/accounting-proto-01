@@ -92,6 +92,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's planned transactions
+     */
+    public function plannedTransactions()
+    {
+        return $this->hasMany(PlannedTransaction::class);
+    }
+
+    /**
      * Get the user's transfers
      */
     public function transfers()

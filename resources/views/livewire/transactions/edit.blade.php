@@ -123,19 +123,7 @@ new class extends Component {
         $originalAccount = auth()->user()->accounts()->findOrFail($this->originalAccountId);
         $newAccount = auth()->user()->accounts()->findOrFail($validated['account_id']);
 
-        // Reverse the original transaction's effect on the original account
-        if ($this->originalType === 'income') {
-            $originalAccount->decrement('balance', $this->originalAmount);
-        } else {
-            $originalAccount->increment('balance', $this->originalAmount);
-        }
-
-        // Apply the new transaction's effect on the new account
-        if ($validated['type'] === 'income') {
-            $newAccount->increment('balance', $validated['amount']);
-        } else {
-            $newAccount->decrement('balance', $validated['amount']);
-        }
+        // Balance updates are handled automatically by TransactionObserver
     }
 
     public function with(): array

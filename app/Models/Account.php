@@ -52,6 +52,24 @@ class Account extends Model
         return $this->hasMany(RecurringTransaction::class);
     }
 
+    public function plannedTransactions(): HasMany
+    {
+        return $this->hasMany(PlannedTransaction::class);
+    }
+
+    public function getProjectedBalanceAttribute(): float
+    {
+        $confirmedAmount = $this->plannedTransactions()
+            ->where('status', 'confirmed')
+            ->where('planned_date', '<=', now()->addDays(30))
+            ->get()
+            ->sum(function ($planned) {
+                return $planned->type === 'income' ? $planned->amount : -$planned->amount;
+            });
+
+        return $this->balance + $confirmedAmount;
+    }
+
     public function imports(): HasMany
     {
         return $this->hasMany(Import::class);
