@@ -123,6 +123,11 @@
 
         {{ $slot }}
 
+        {{-- Flux Toast Component --}}
+        @persist('toast')
+            <flux:toast />
+        @endpersist
+
         @fluxScripts
     </body>
 </html>

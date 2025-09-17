@@ -16,6 +16,7 @@ new class extends Component {
     public $budgets = [];
     public $goals = [];
     public $upcomingPlanned = [];
+    public $portfolioData = [];
 
     public function mount(): void
     {
@@ -79,8 +80,60 @@ new class extends Component {
             ->limit(5)
             ->get();
 
+        // Get investment portfolio overview
+        $this->portfolioData = $this->getPortfolioData();
+
         // Calculate monthly net
         $this->monthlyNet = $this->monthlyIncome - $this->monthlyExpenses;
+    }
+
+    private function getPortfolioData(): array
+    {
+        $user = auth()->user();
+
+        // Get all investment accounts with holdings
+        $investmentAccounts = $user->accounts()
+            ->where('type', 'investment')
+            ->with(['holdings' => function($query) {
+                $query->orderBy('market_value', 'desc');
+            }])
+            ->get();
+
+        $totalPortfolioValue = 0;
+        $totalInvested = 0;
+        $totalPnl = 0;
+        $topHoldings = collect();
+
+        foreach ($investmentAccounts as $account) {
+            $accountValue = $account->total_portfolio_value;
+            $accountInvested = $account->total_invested;
+            $accountPnl = $account->total_unrealized_pnl;
+
+            $totalPortfolioValue += $accountValue;
+            $totalInvested += $accountInvested;
+            $totalPnl += $accountPnl;
+
+            // Add holdings to top holdings list
+            foreach ($account->holdings as $holding) {
+                $topHoldings->push([
+                    'name' => $holding->name,
+                    'symbol' => $holding->symbol,
+                    'market_value' => $holding->market_value,
+                    'quantity' => $holding->quantity,
+                    'asset_type' => $holding->asset_type,
+                    'account_name' => $account->name,
+                ]);
+            }
+        }
+
+        return [
+            'total_value' => $totalPortfolioValue,
+            'total_invested' => $totalInvested,
+            'total_pnl' => $totalPnl,
+            'pnl_percentage' => $totalInvested > 0 ? ($totalPnl / $totalInvested) * 100 : 0,
+            'top_holdings' => $topHoldings->sortByDesc('market_value')->take(5),
+            'account_count' => $investmentAccounts->count(),
+        ];
     }
 
 }; ?>
@@ -240,6 +293,55 @@ new class extends Component {
                     @endforelse
                 </div>
             </div>
+
+            {{-- Investment Portfolio --}}
+            @if($portfolioData['total_value'] > 0)
+                <div class="bg-white rounded-lg border border-neutral-200 p-6 dark:bg-neutral-800 dark:border-neutral-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Investment Portfolio') }}</h3>
+                        <flux:link href="/admin/assets" class="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                            {{ __('Manage Assets') }}
+                        </flux:link>
+                    </div>
+
+                    {{-- Portfolio Summary --}}
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Total Value') }}</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">€{{ number_format($portfolioData['total_value'], 2) }}</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Invested') }}</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">€{{ number_format($portfolioData['total_invested'], 2) }}</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('P&L') }}</p>
+                            <p class="text-lg font-bold {{ $portfolioData['total_pnl'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                {{ $portfolioData['total_pnl'] >= 0 ? '+' : '' }}€{{ number_format($portfolioData['total_pnl'], 2) }}
+                                <span class="text-sm">({{ number_format($portfolioData['pnl_percentage'], 1) }}%)</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- Top Holdings --}}
+                    <div class="space-y-2">
+                        @foreach($portfolioData['top_holdings'] as $holding)
+                            <div class="flex items-center justify-between py-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs px-2 py-1 rounded-full {{ $holding['asset_type'] === 'crypto' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400' : ($holding['asset_type'] === 'stock' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400') }}">
+                                        {{ strtoupper($holding['symbol']) }}
+                                    </span>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $holding['name'] }}</span>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">€{{ number_format($holding['market_value'], 2) }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ number_format($holding['quantity'], $holding['asset_type'] === 'crypto' ? 6 : 0) }}</p>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             {{-- Budgets & Goals --}}
             <div class="space-y-6">

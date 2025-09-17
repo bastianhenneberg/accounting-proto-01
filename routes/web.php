@@ -17,6 +17,7 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('accounts/create', 'accounts.create')->name('accounts.create');
     Volt::route('accounts/{account}', 'accounts.show')->name('accounts.show');
     Volt::route('accounts/{account}/edit', 'accounts.edit')->name('accounts.edit');
+    Volt::route('accounts/{account}/holdings', 'accounts.holdings')->name('accounts.holdings');
     
     Volt::route('transactions', 'transactions.index')->name('transactions.index');
     Volt::route('transactions/create', 'transactions.create')->name('transactions.create');
@@ -48,6 +49,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
     Volt::route('settings/language', 'settings.language')->name('settings.language');
+
+    // Admin routes
+    Volt::route('admin/assets', 'admin.assets')->name('admin.assets');
 
     // Locale switching route
     Route::get('/locale/{locale}', function (string $locale) {

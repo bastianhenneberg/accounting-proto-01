@@ -9,24 +9,61 @@ new class extends Component {
     public $type = 'checking';
     public $balance = 0.00;
     public $currency = 'EUR';
+    public $crypto_symbol = '';
+    public $crypto_balance = 0.00000000;
     public $account_number = '';
     public $bank_name = '';
 
     public function save(): void
     {
-        $validated = $this->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:100'],
-            'type' => ['required', Rule::in(['checking', 'savings', 'credit_card', 'cash', 'investment'])],
-            'balance' => ['required', 'numeric', 'min:0'],
-            'currency' => ['required', 'string', 'size:3'],
+            'type' => ['required', Rule::in(['checking', 'savings', 'credit_card', 'cash', 'investment', 'crypto'])],
             'account_number' => ['nullable', 'string', 'max:50'],
             'bank_name' => ['nullable', 'string', 'max:100'],
-        ]);
+        ];
 
-        auth()->user()->accounts()->create([
-            ...$validated,
+        // Add crypto-specific validation
+        if ($this->type === 'crypto') {
+            $rules['crypto_symbol'] = ['required', 'string', Rule::in(array_keys(\App\Services\CryptoPriceService::getSupportedCryptocurrencies()))];
+            $rules['crypto_balance'] = ['required', 'numeric', 'min:0'];
+        } else {
+            $rules['balance'] = ['required', 'numeric', 'min:0'];
+            $rules['currency'] = ['required', 'string', 'size:3'];
+        }
+
+        $validated = $this->validate($rules);
+
+        // Create account with appropriate data
+        $accountData = [
+            'name' => $validated['name'],
+            'type' => $validated['type'],
+            'account_number' => $validated['account_number'] ?? null,
+            'bank_name' => $validated['bank_name'] ?? null,
             'is_active' => true,
-        ]);
+        ];
+
+        if ($this->type === 'crypto') {
+            // For crypto accounts, get initial price and calculate fiat value
+            $currentPrice = \App\Services\CryptoPriceService::getPrice($this->crypto_symbol);
+
+            $accountData = array_merge($accountData, [
+                'crypto_symbol' => $validated['crypto_symbol'],
+                'crypto_balance' => $validated['crypto_balance'],
+                'fiat_value' => $validated['crypto_balance'] * $currentPrice,
+                'current_price' => $currentPrice,
+                'last_price_update' => now(),
+                'currency' => 'EUR', // Always EUR for fiat display
+                'balance' => 0, // Not used for crypto accounts
+            ]);
+        } else {
+            $accountData = array_merge($accountData, [
+                'balance' => $validated['balance'],
+                'currency' => $validated['currency'],
+            ]);
+        }
+
+        auth()->user()->accounts()->create($accountData);
 
         session()->flash('success', 'Account created successfully.');
         $this->redirect('/accounts', navigate: true);
@@ -39,8 +76,33 @@ new class extends Component {
             'savings' => 'Savings Account',
             'credit_card' => 'Credit Card',
             'cash' => 'Cash',
-            'investment' => 'Investment Account',
+            'investment' => 'Investment Account (Multi-Asset)',
         ];
+    }
+
+    public function getSupportedCryptos(): array
+    {
+        return \App\Services\CryptoPriceService::getSupportedCryptocurrencies();
+    }
+
+    public function updatedType(): void
+    {
+        // Reset crypto fields when switching away from crypto
+        if ($this->type !== 'crypto') {
+            $this->crypto_symbol = '';
+            $this->crypto_balance = 0.00000000;
+        }
+    }
+
+    public function updatedCryptoSymbol(): void
+    {
+        // Auto-update account name when crypto symbol changes
+        if ($this->crypto_symbol && $this->type === 'crypto') {
+            $cryptoName = $this->getSupportedCryptos()[$this->crypto_symbol] ?? '';
+            if ($cryptoName && !$this->name) {
+                $this->name = $cryptoName . ' Wallet';
+            }
+        }
     }
 
     public function getCurrencies(): array
@@ -75,33 +137,75 @@ new class extends Component {
 
                 {{-- Account Type --}}
                 <div>
-                    <flux:select wire:model="type" label="Account Type" required>
+                    <flux:select wire:model.live="type" label="Account Type" required>
                         @foreach($this->getAccountTypes() as $value => $label)
                             <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
                     </flux:select>
                 </div>
 
-                {{-- Initial Balance and Currency --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <flux:input 
-                            wire:model="balance" 
-                            label="Initial Balance" 
-                            type="number" 
-                            step="0.01"
-                            min="0"
-                            required 
-                        />
+                @if($type === 'crypto')
+                    {{-- Crypto-specific fields --}}
+                    <div class="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                        <h3 class="font-medium text-orange-900 dark:text-orange-100 mb-4">{{ __('Cryptocurrency Settings') }}</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <flux:select wire:model.live="crypto_symbol" label="Cryptocurrency" required>
+                                    <option value="">{{ __('Select Cryptocurrency') }}</option>
+                                    @foreach($this->getSupportedCryptos() as $symbol => $name)
+                                        <option value="{{ $symbol }}">{{ $name }} ({{ $symbol }})</option>
+                                    @endforeach
+                                </flux:select>
+                            </div>
+                            <div>
+                                <flux:input
+                                    wire:model="crypto_balance"
+                                    label="Initial {{ strtoupper($crypto_symbol) }} Balance"
+                                    type="number"
+                                    step="0.00000001"
+                                    min="0"
+                                    placeholder="0.00000000"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        @if($crypto_symbol && $crypto_balance > 0)
+                            @php
+                                $currentPrice = \App\Services\CryptoPriceService::getPrice($crypto_symbol);
+                                $estimatedValue = $crypto_balance * $currentPrice;
+                            @endphp
+                            <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <p class="text-sm text-blue-800 dark:text-blue-200">
+                                    {{ __('Estimated EUR Value') }}: <strong>€{{ number_format($estimatedValue, 2) }}</strong>
+                                    ({{ __('at') }} €{{ number_format($currentPrice, $crypto_symbol === 'BTC' ? 0 : 4) }}/{{ strtoupper($crypto_symbol) }})
+                                </p>
+                            </div>
+                        @endif
                     </div>
-                    <div>
-                        <flux:select wire:model="currency" label="Currency" required>
-                            @foreach($this->getCurrencies() as $value => $label)
-                                <option value="{{ $value }}">{{ $label }}</option>
-                            @endforeach
-                        </flux:select>
+                @else
+                    {{-- Traditional account fields --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <flux:input
+                                wire:model="balance"
+                                label="Initial Balance"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <flux:select wire:model="currency" label="Currency" required>
+                                @foreach($this->getCurrencies() as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </flux:select>
+                        </div>
                     </div>
-                </div>
+                @endif
 
                 {{-- Bank Details (Optional) --}}
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-6">

@@ -1,0 +1,522 @@
+# Product Requirements Document (PRD)
+# Crypto Accounts Feature
+
+## 1. Overview
+
+### 1.1 Feature Summary
+The Crypto Accounts feature extends the existing account system to support cryptocurrency holdings like Bitcoin, XRP, Ethereum, etc. It provides real-time EUR valuations, portfolio tracking, and seamless integration with the existing financial management system.
+
+### 1.2 Problem Statement
+Users with cryptocurrency investments (Trade Republic, Binance, etc.) currently cannot:
+- Track crypto holdings alongside traditional accounts
+- See total portfolio value including crypto assets
+- Monitor crypto price changes and portfolio performance
+- Budget with crypto income/expenses
+- Plan transactions involving crypto conversions
+
+### 1.3 Success Metrics
+- Users can track crypto portfolios with real-time valuations
+- 95% uptime for price data updates
+- Seamless integration with existing budgeting and planning features
+- Users report improved overall financial oversight
+
+## 2. User Stories
+
+### 2.1 Core User Stories
+**As a user, I want to:**
+- Add crypto accounts (Bitcoin, XRP, etc.) to my portfolio
+- See real-time EUR valuations of my crypto holdings
+- Track crypto transactions (buy, sell, transfer, rewards)
+- View crypto portfolio performance alongside traditional accounts
+- Include crypto assets in financial planning and budgeting
+- Monitor price changes and portfolio allocation
+
+### 2.2 Acceptance Criteria
+- Users can create crypto accounts with supported cryptocurrencies
+- Account balances show both crypto amount and EUR equivalent
+- Dashboard displays crypto portfolio with price changes
+- All existing features (budgets, planning, transactions) work with crypto accounts
+- Price data updates automatically with reasonable frequency
+- Mobile-responsive crypto portfolio displays
+
+## 3. Technical Specifications
+
+### 3.1 Database Schema Extensions
+
+#### 3.1.1 Accounts Table Migration
+```sql
+ALTER TABLE accounts ADD COLUMN:
+- crypto_symbol VARCHAR(10) NULL -- 'BTC', 'XRP', 'ETH', etc.
+- crypto_balance DECIMAL(20,8) NULL -- Precise crypto amount
+- fiat_value DECIMAL(15,2) NULL -- Cached EUR equivalent
+- last_price_update TIMESTAMP NULL -- When price was last fetched
+- current_price DECIMAL(15,8) NULL -- Current price per unit in EUR
+
+-- New account type
+ALTER TABLE accounts MODIFY COLUMN type ENUM('checking', 'savings', 'credit_card', 'cash', 'investment', 'crypto');
+```
+
+#### 3.1.2 Crypto Prices Table (Optional)
+```sql
+CREATE TABLE crypto_prices (
+    id BIGINT PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    price_eur DECIMAL(15,8) NOT NULL,
+    price_usd DECIMAL(15,8) NOT NULL,
+    market_cap BIGINT NULL,
+    volume_24h BIGINT NULL,
+    change_24h DECIMAL(8,4) NULL,
+    updated_at TIMESTAMP,
+
+    UNIQUE(symbol),
+    INDEX(symbol, updated_at)
+);
+```
+
+### 3.2 Model Extensions
+
+#### 3.2.1 Account Model
+```php
+// Crypto-specific methods
+public function isCrypto(): bool
+{
+    return $this->type === 'crypto';
+}
+
+public function getCryptoDisplayName(): string
+{
+    return match($this->crypto_symbol) {
+        'BTC' => 'Bitcoin',
+        'XRP' => 'XRP',
+        'ETH' => 'Ethereum',
+        'ADA' => 'Cardano',
+        default => strtoupper($this->crypto_symbol)
+    };
+}
+
+public function getFormattedCryptoBalanceAttribute(): string
+{
+    if (!$this->isCrypto()) return '';
+
+    return number_format($this->crypto_balance, 8) . ' ' . strtoupper($this->crypto_symbol);
+}
+
+public function getFormattedFiatValueAttribute(): string
+{
+    if (!$this->isCrypto()) return $this->formatted_balance;
+
+    return '€' . number_format($this->fiat_value, 2);
+}
+
+public function getCurrentPriceAttribute(): float
+{
+    return $this->current_price ?? 0;
+}
+
+public function getPrice24hChangeAttribute(): float
+{
+    // Calculate from crypto_prices table or API
+    return CryptoPriceService::get24hChange($this->crypto_symbol);
+}
+```
+
+#### 3.2.2 Transaction Model Extensions
+```php
+// New transaction types for crypto
+const CRYPTO_TYPES = ['crypto_buy', 'crypto_sell', 'crypto_transfer', 'crypto_reward'];
+
+public function isCryptoTransaction(): bool
+{
+    return $this->account?->isCrypto() || in_array($this->type, self::CRYPTO_TYPES);
+}
+
+// Crypto-specific fields (extend existing)
+- crypto_amount DECIMAL(20,8) NULL -- Amount in crypto units
+- crypto_price DECIMAL(15,8) NULL -- Price at transaction time
+- transaction_hash VARCHAR(255) NULL -- Blockchain hash (optional)
+```
+
+### 3.3 Crypto Price Service
+```php
+// app/Services/CryptoPriceService.php
+class CryptoPriceService
+{
+    private const API_URL = 'https://api.coingecko.com/api/v3/simple/price';
+
+    public static function updatePrices(array $symbols): void
+    {
+        $prices = Http::get(self::API_URL, [
+            'ids' => implode(',', self::getCoingeckoIds($symbols)),
+            'vs_currencies' => 'eur,usd',
+            'include_24hr_change' => true
+        ])->json();
+
+        foreach ($symbols as $symbol) {
+            self::updateAccountPrices($symbol, $prices);
+        }
+    }
+
+    public static function getPrice(string $symbol): float
+    {
+        $response = Http::get(self::API_URL, [
+            'ids' => self::getCoingeckoId($symbol),
+            'vs_currencies' => 'eur'
+        ])->json();
+
+        return $response[self::getCoingeckoId($symbol)]['eur'] ?? 0;
+    }
+
+    private static function getCoingeckoIds(array $symbols): array
+    {
+        return array_map([self::class, 'getCoingeckoId'], $symbols);
+    }
+
+    private static function getCoingeckoId(string $symbol): string
+    {
+        return match(strtoupper($symbol)) {
+            'BTC' => 'bitcoin',
+            'XRP' => 'ripple',
+            'ETH' => 'ethereum',
+            'ADA' => 'cardano',
+            default => strtolower($symbol)
+        };
+    }
+}
+```
+
+## 4. User Interface Design
+
+### 4.1 Account Creation Enhancement
+```
+Account Type Selection:
+○ Checking Account
+○ Savings Account
+○ Credit Card
+○ Cash
+○ Investment Account
+● Crypto Account (NEW)
+
+[When Crypto selected:]
+Cryptocurrency: [Dropdown: Bitcoin, XRP, Ethereum, ...]
+Initial Balance: [0.00000000] BTC
+Current EUR Value: €0.00 (auto-calculated)
+```
+
+### 4.2 Crypto Account Display
+
+#### 4.2.1 Account List View
+```
+┌─────────────────────────────────────────────┐
+│ ₿ Bitcoin Wallet                            │
+│ Trade Republic                              │
+│                                             │
+│ 0.05234567 BTC        €2,617.89           │
+│ €50,025.43/BTC  📈 +2.3% (24h)            │
+│ Updated 5 minutes ago                       │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│ ⚡ XRP Wallet                               │
+│ Trade Republic                              │
+│                                             │
+│ 2,450.789 XRP         €1,372.44           │
+│ €0.56023/XRP  📉 -1.2% (24h)              │
+│ Updated 5 minutes ago                       │
+└─────────────────────────────────────────────┘
+```
+
+#### 4.2.2 Dashboard Crypto Widget
+```
+┌─────────────────────────────────────────────┐
+│ Crypto Portfolio                            │
+├─────────────────────────────────────────────┤
+│ Bitcoin     0.052 BTC      €2,617.89  📈    │
+│ XRP         2,451 XRP      €1,372.44  📉    │
+│ Ethereum    0.875 ETH      €2,143.75  📈    │
+├─────────────────────────────────────────────┤
+│ Total Crypto Value:        €6,134.08       │
+│ 24h Change:               +€127.45 (+2.1%) │
+└─────────────────────────────────────────────┘
+```
+
+### 4.3 Crypto Transaction Types
+
+#### 4.3.1 Enhanced Transaction Creation
+```
+Transaction Type:
+○ Income ○ Expense ○ Transfer
+● Crypto Buy    (EUR → Crypto)
+● Crypto Sell   (Crypto → EUR)
+● Crypto Transfer (Wallet → Wallet)
+● Crypto Reward  (Staking, Mining)
+
+[For Crypto Buy:]
+EUR Amount: €1,000.00
+Crypto Received: [Auto-calculated] BTC
+Price per Unit: €49,850.23
+Exchange/Platform: Trade Republic
+```
+
+## 5. Supported Cryptocurrencies (Phase 1)
+
+### 5.1 Major Cryptocurrencies
+- **Bitcoin (BTC)** - Primary focus
+- **XRP** - Trade Republic support
+- **Ethereum (ETH)** - DeFi ecosystem
+- **Cardano (ADA)** - Popular alternative
+- **Polygon (MATIC)** - Layer 2 solution
+
+### 5.2 Price Data Sources
+- **Primary**: CoinGecko API (free tier: 50 calls/minute)
+- **Fallback**: CoinMarketCap API
+- **Update Frequency**: Every 15 minutes (or manual refresh)
+
+## 6. Business Logic
+
+### 6.1 Price Update Strategy
+```php
+// Scheduled task: Every 15 minutes
+$cryptoAccounts = Account::where('type', 'crypto')->get();
+$symbols = $cryptoAccounts->pluck('crypto_symbol')->unique();
+
+CryptoPriceService::updatePrices($symbols->toArray());
+
+// Update each account's fiat_value
+foreach ($cryptoAccounts as $account) {
+    $currentPrice = CryptoPriceService::getPrice($account->crypto_symbol);
+    $account->update([
+        'fiat_value' => $account->crypto_balance * $currentPrice,
+        'current_price' => $currentPrice,
+        'last_price_update' => now()
+    ]);
+}
+```
+
+### 6.2 Transaction Calculations
+```php
+// Crypto Buy Transaction
+$eurAmount = 1000.00;
+$btcPrice = 49850.23;
+$btcReceived = $eurAmount / $btcPrice; // 0.02007972 BTC
+
+// Update account
+$account->increment('crypto_balance', $btcReceived);
+$account->update(['fiat_value' => $account->crypto_balance * $btcPrice]);
+
+// Create transaction record
+Transaction::create([
+    'type' => 'crypto_buy',
+    'amount' => $eurAmount, // EUR spent
+    'crypto_amount' => $btcReceived, // BTC received
+    'crypto_price' => $btcPrice, // Price at transaction time
+    'description' => "Bought {$btcReceived} BTC at €{$btcPrice}"
+]);
+```
+
+### 6.3 Portfolio Calculations
+```php
+public function getCryptoPortfolioValue(): array
+{
+    $cryptoAccounts = $this->accounts()->where('type', 'crypto')->get();
+
+    return [
+        'total_value' => $cryptoAccounts->sum('fiat_value'),
+        'total_change_24h' => $cryptoAccounts->sum('change_24h_eur'),
+        'total_change_percent' => $this->calculatePortfolioChangePercent(),
+        'assets' => $cryptoAccounts->map(function($account) {
+            return [
+                'symbol' => $account->crypto_symbol,
+                'balance' => $account->crypto_balance,
+                'value' => $account->fiat_value,
+                'price' => $account->current_price,
+                'change_24h' => $account->price_24h_change
+            ];
+        })
+    ];
+}
+```
+
+## 7. Implementation Phases
+
+### Phase 1: Core Crypto Support (Day 1)
+- [ ] Extend Account model with crypto fields
+- [ ] Create migration for crypto support
+- [ ] Build basic crypto account creation
+- [ ] Implement simple price fetching
+
+### Phase 2: Price Integration (Day 1-2)
+- [ ] Implement CryptoPriceService with CoinGecko API
+- [ ] Add automatic price updates via scheduled tasks
+- [ ] Create crypto-specific account displays
+- [ ] Add price change indicators
+
+### Phase 3: Transaction Support (Day 2)
+- [ ] Extend transaction types for crypto operations
+- [ ] Build crypto buy/sell/transfer transaction forms
+- [ ] Implement crypto amount calculations
+- [ ] Add transaction history with crypto details
+
+### Phase 4: Portfolio & Analytics (Day 2-3)
+- [ ] Create crypto portfolio dashboard widget
+- [ ] Add portfolio performance charts
+- [ ] Implement profit/loss calculations
+- [ ] Add crypto allocation views
+
+## 8. UI Components
+
+### 8.1 Crypto Account Card Component
+```php
+// resources/views/components/crypto-account-card.blade.php
+<div class="crypto-account-card">
+    <div class="crypto-header">
+        <div class="crypto-icon">{{ $cryptoIcon }}</div>
+        <div class="crypto-info">
+            <h3>{{ $account->name }}</h3>
+            <p>{{ $account->getCryptoDisplayName() }}</p>
+        </div>
+    </div>
+
+    <div class="crypto-balance">
+        <p class="crypto-amount">{{ $account->formatted_crypto_balance }}</p>
+        <p class="fiat-value">{{ $account->formatted_fiat_value }}</p>
+    </div>
+
+    <div class="crypto-price-info">
+        <p>€{{ number_format($account->current_price, 2) }}/{{ $account->crypto_symbol }}</p>
+        <span class="price-change {{ $account->price_24h_change >= 0 ? 'positive' : 'negative' }}">
+            {{ $account->price_24h_change >= 0 ? '📈' : '📉' }}
+            {{ number_format($account->price_24h_change, 2) }}%
+        </span>
+    </div>
+</div>
+```
+
+### 8.2 Crypto Portfolio Widget
+```php
+// Dashboard widget showing complete crypto overview
+- Total portfolio value
+- Individual asset breakdown
+- 24h performance summary
+- Quick action buttons (buy/sell)
+```
+
+## 9. API Integration
+
+### 9.1 CoinGecko Integration
+```php
+// Free tier limitations:
+- 50 calls per minute
+- 10,000 calls per month
+- Rate limiting required
+
+// Pricing endpoint
+GET https://api.coingecko.com/api/v3/simple/price
+?ids=bitcoin,ripple,ethereum
+&vs_currencies=eur,usd
+&include_24hr_change=true
+
+Response:
+{
+    "bitcoin": {
+        "eur": 49850.23,
+        "usd": 54230.15,
+        "eur_24h_change": 2.34
+    },
+    "ripple": {
+        "eur": 0.5602,
+        "usd": 0.6105,
+        "eur_24h_change": -1.23
+    }
+}
+```
+
+### 9.2 Error Handling & Fallbacks
+- Cache last known prices for offline scenarios
+- Graceful degradation when API is unavailable
+- User notification for stale price data
+- Manual price refresh option
+
+## 10. Security Considerations
+
+### 10.1 API Security
+- Store API keys in environment variables
+- Implement rate limiting to respect API quotas
+- Validate all API responses before database updates
+- Log API failures for monitoring
+
+### 10.2 Data Validation
+- Validate crypto symbols against supported list
+- Enforce decimal precision limits for crypto amounts
+- Prevent negative crypto balances
+- Audit trail for all crypto transactions
+
+## 11. Performance Optimizations
+
+### 11.1 Caching Strategy
+- Cache crypto prices for 15-minute intervals
+- Background job for price updates (don't block UI)
+- Redis caching for frequently accessed portfolio data
+- Efficient database queries with proper indexing
+
+### 11.2 Loading States
+- Skeleton loading for crypto account cards
+- Progressive price updates (show cached, then fresh)
+- Optimistic UI updates for better UX
+
+## 12. Multilingual Support
+
+### 12.1 Crypto-Specific Translations
+```json
+{
+    "Crypto Account": "Krypto-Konto",
+    "Bitcoin Wallet": "Bitcoin-Wallet",
+    "Crypto Portfolio": "Krypto-Portfolio",
+    "Current Price": "Aktueller Preis",
+    "24h Change": "24h Änderung",
+    "Crypto Balance": "Krypto-Guthaben",
+    "Fiat Value": "Fiat-Wert",
+    "Buy Crypto": "Krypto kaufen",
+    "Sell Crypto": "Krypto verkaufen",
+    "Price per unit": "Preis pro Einheit",
+    "Market Cap": "Marktkapitalisierung",
+    "Volume": "Volumen"
+}
+```
+
+## 13. Future Enhancements
+
+### 13.1 Advanced Features (Phase 2)
+- **DeFi Integration**: Track staking rewards, liquidity pools
+- **NFT Support**: Basic NFT portfolio tracking
+- **Tax Reporting**: Crypto gains/losses for tax purposes
+- **Price Alerts**: Notifications for price thresholds
+- **Advanced Charts**: Portfolio performance over time
+
+### 13.2 Integration Opportunities
+- **Bank API**: Import crypto transactions from Trade Republic
+- **Hardware Wallets**: Ledger/Trezor integration
+- **DeFi Protocols**: Uniswap, Compound tracking
+- **Tax Software**: Export for crypto tax tools
+
+## 14. Risk Assessment
+
+### 14.1 Technical Risks
+- **API Dependencies**: CoinGecko/CMC availability
+- **Price Volatility**: Rapid value changes
+- **Data Accuracy**: Price feed reliability
+- **Rate Limits**: API quota management
+
+### 14.2 Mitigation Strategies
+- Multiple API providers for redundancy
+- Robust error handling and fallbacks
+- User education about crypto volatility
+- Clear disclaimers about price accuracy
+
+---
+
+**Implementation Priority**: High
+**Estimated Development Time**: 2-3 days
+**Dependencies**: Existing Account and Transaction systems
+**Risk Level**: Medium (external API dependencies)
+
+**Ready for Crypto Revolution** 🚀₿📈

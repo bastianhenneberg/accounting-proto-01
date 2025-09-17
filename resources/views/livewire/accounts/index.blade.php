@@ -75,19 +75,31 @@ new class extends Component {
                                         <flux:icon.credit-card class="w-6 h-6 text-red-600 dark:text-red-400" />
                                     @elseif($account->type === 'cash')
                                         <flux:icon.currency-euro class="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                                    @elseif($account->type === 'investment')
+                                        <flux:icon.chart-pie class="w-6 h-6 text-purple-600 dark:text-purple-400" />
                                     @else
-                                        <flux:icon.chart-bar class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                                        <flux:icon.chart-bar class="w-6 h-6 text-gray-600 dark:text-gray-400" />
                                     @endif
                                 </div>
                                 <div>
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $account->name }}</h3>
-                                    <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                                        <span class="capitalize">{{ str_replace('_', ' ', $account->type) }}</span>
-                                        @if($account->bank_name)
-                                            <span>{{ $account->bank_name }}</span>
-                                        @endif
-                                        @if($account->account_number)
-                                            <span>****{{ substr($account->account_number, -4) }}</span>
+                                    <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                                        @if($account->isCrypto())
+                                            <span class="text-orange-600 dark:text-orange-400 font-medium">{{ $account->getCryptoDisplayName() }}</span>
+                                            @if($account->crypto_symbol)
+                                                <span>•</span>
+                                                <span>{{ strtoupper($account->crypto_symbol) }}</span>
+                                            @endif
+                                        @else
+                                            <span class="capitalize">{{ str_replace('_', ' ', $account->type) }}</span>
+                                            @if($account->bank_name)
+                                                <span>•</span>
+                                                <span>{{ $account->bank_name }}</span>
+                                            @endif
+                                            @if($account->account_number)
+                                                <span>•</span>
+                                                <span>****{{ substr($account->account_number, -4) }}</span>
+                                            @endif
                                         @endif
                                     </div>
                                 </div>
@@ -95,15 +107,31 @@ new class extends Component {
                             
                             <div class="flex items-center space-x-4">
                                 <div class="text-right">
-                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                                        €{{ number_format($account->balance, 2) }}
-                                    </p>
-                                    @if($account->projected_balance != $account->balance)
-                                        <p class="text-sm {{ $account->projected_balance >= $account->balance ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                            {{ __('Projected') }}: €{{ number_format($account->projected_balance, 2) }}
+                                    @if($account->isInvestment())
+                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                                            €{{ number_format($account->total_portfolio_value, 2) }}
                                         </p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                                            {{ $account->holdings()->count() }} {{ __('holdings') }}
+                                        </p>
+                                        @if($account->total_unrealized_pnl != 0)
+                                            <p class="text-xs {{ $account->total_unrealized_pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                                {{ $account->total_unrealized_pnl >= 0 ? '+' : '' }}€{{ number_format($account->total_unrealized_pnl, 2) }}
+                                                ({{ number_format($account->portfolio_pnl_percentage, 2) }}%)
+                                                {{ $account->total_unrealized_pnl >= 0 ? '📈' : '📉' }}
+                                            </p>
+                                        @endif
                                     @else
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $account->currency }}</p>
+                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                                            €{{ number_format($account->balance, 2) }}
+                                        </p>
+                                        @if($account->projected_balance != $account->balance)
+                                            <p class="text-sm {{ $account->projected_balance >= $account->balance ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                                {{ __('Projected') }}: €{{ number_format($account->projected_balance, 2) }}
+                                            </p>
+                                        @else
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $account->currency }}</p>
+                                        @endif
                                     @endif
                                 </div>
                                 
@@ -112,10 +140,15 @@ new class extends Component {
                                     
                                     <flux:menu>
                                         <flux:menu.item href="/accounts/{{ $account->id }}" icon="eye" wire:navigate>
-                                            View Details
+                                            {{ __('View Details') }}
                                         </flux:menu.item>
+                                        @if($account->isInvestment())
+                                            <flux:menu.item href="/accounts/{{ $account->id }}/holdings" icon="chart-pie" wire:navigate>
+                                                {{ __('Manage Holdings') }}
+                                            </flux:menu.item>
+                                        @endif
                                         <flux:menu.item href="/transactions?account={{ $account->id }}" icon="list-bullet" wire:navigate>
-                                            View Transactions
+                                            {{ __('View Transactions') }}
                                         </flux:menu.item>
                                         <flux:menu.separator />
                                         <flux:menu.item 

@@ -9,7 +9,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git branch:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "mcp__laravel-boost__last-error",
+      "mcp__laravel-boost__tinker",
+      "WebFetch(domain:www.alphavantage.co)"
     ],
     "deny": []
   },

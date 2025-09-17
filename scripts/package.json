@@ -1,0 +1,12 @@
+{
+  "name": "puppeteer-screenshots",
+  "version": "1.0.0",
+  "description": "Puppeteer scripts for ETF price screenshots",
+  "main": "take-screenshot.js",
+  "scripts": {
+    "install-puppeteer": "npm install puppeteer"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0"
+  }
+}
