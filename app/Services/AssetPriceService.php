@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Holding;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class AssetPriceService
 {
     private const CRYPTO_API_URL = 'https://api.coingecko.com/api/v3/simple/price';
+
     private const ALPHA_VANTAGE_URL = 'https://www.alphavantage.co/query';
+
     private const CACHE_TTL = 900; // 15 minutes
 
     private static array $cryptoMapping = [
@@ -30,7 +32,7 @@ class AssetPriceService
 
     public static function updateHoldingPrice(Holding $holding): bool
     {
-        $priceData = match($holding->asset_type) {
+        $priceData = match ($holding->asset_type) {
             'crypto' => self::getCryptoPrice($holding->symbol),
             'stock', 'etf' => self::getStockPrice($holding->symbol),
             default => ['price' => 0, 'change_24h' => 0]
@@ -49,6 +51,7 @@ class AssetPriceService
 
         // If API fails, keep existing price but mark as stale
         Log::warning("Failed to update price for {$holding->symbol} via API");
+
         return false;
     }
 
@@ -109,14 +112,14 @@ class AssetPriceService
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($symbol) {
             try {
                 $coingeckoId = self::$cryptoMapping[strtoupper($symbol)] ?? null;
-                if (!$coingeckoId) {
+                if (! $coingeckoId) {
                     return ['price' => 0, 'change_24h' => 0];
                 }
 
                 $response = Http::timeout(10)->get(self::CRYPTO_API_URL, [
                     'ids' => $coingeckoId,
                     'vs_currencies' => 'eur',
-                    'include_24hr_change' => 'true'
+                    'include_24hr_change' => 'true',
                 ]);
 
                 if ($response->successful()) {
@@ -130,7 +133,7 @@ class AssetPriceService
                 }
 
             } catch (\Exception $e) {
-                Log::error("Crypto price error for {$symbol}: " . $e->getMessage());
+                Log::error("Crypto price error for {$symbol}: ".$e->getMessage());
             }
 
             return ['price' => 0, 'change_24h' => 0];
@@ -140,7 +143,7 @@ class AssetPriceService
     private static function getBatchCryptoPrices(array $symbols): array
     {
         $coingeckoIds = collect($symbols)
-            ->map(fn($symbol) => self::$cryptoMapping[strtoupper($symbol)] ?? null)
+            ->map(fn ($symbol) => self::$cryptoMapping[strtoupper($symbol)] ?? null)
             ->filter()
             ->unique();
 
@@ -152,10 +155,10 @@ class AssetPriceService
             $response = Http::timeout(15)->get(self::CRYPTO_API_URL, [
                 'ids' => $coingeckoIds->implode(','),
                 'vs_currencies' => 'eur',
-                'include_24hr_change' => 'true'
+                'include_24hr_change' => 'true',
             ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 return [];
             }
 
@@ -176,24 +179,25 @@ class AssetPriceService
             return $result;
 
         } catch (\Exception $e) {
-            Log::error("Batch crypto price update failed: " . $e->getMessage());
+            Log::error('Batch crypto price update failed: '.$e->getMessage());
+
             return [];
         }
     }
 
-    private static function getStockPrice(string $symbol): array
+    public static function getStockPrice(string $symbol): array
     {
         $cacheKey = "stock_price_{$symbol}";
 
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($symbol) {
             // Get asset from database
             $asset = \App\Models\SupportedAsset::where('symbol', $symbol)->first();
-            if (!$asset) {
+            if (! $asset) {
                 return ['price' => 100.0, 'change_24h' => 0.0];
             }
 
             // Try Alpha Vantage for US stocks
-            if ($asset->asset_type === 'stock' && !str_contains($asset->api_id ?? '', '.de')) {
+            if ($asset->asset_type === 'stock' && ! str_contains($asset->api_id ?? '', '.de')) {
                 $alphaResult = self::getAlphaVantagePrice($asset);
                 if ($alphaResult['price'] > 0) {
                     return $alphaResult;
@@ -207,13 +211,14 @@ class AssetPriceService
                     return [
                         'price' => $puppeteerResult['price'],
                         'change_24h' => 0,
-                        'source' => 'puppeteer_ai'
+                        'source' => 'puppeteer_ai',
                     ];
                 }
             }
 
             // No price available - use manual updates for accuracy
             Log::info("No API price available for {$symbol} - use manual price update");
+
             return ['price' => 0, 'change_24h' => 0];
         });
     }
@@ -227,14 +232,14 @@ class AssetPriceService
             $response = Http::timeout(15)->get(self::ALPHA_VANTAGE_URL, [
                 'function' => 'GLOBAL_QUOTE',
                 'symbol' => $apiSymbol,
-                'apikey' => $apiKey
+                'apikey' => $apiKey,
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
                 $quote = $data['Global Quote'] ?? [];
 
-                if (!empty($quote)) {
+                if (! empty($quote)) {
                     $currentPrice = (float) ($quote['05. price'] ?? 0);
                     $change = (float) ($quote['09. change'] ?? 0);
                     $changePercent = (float) str_replace('%', '', $quote['10. change percent'] ?? '0');
@@ -245,21 +250,22 @@ class AssetPriceService
                         return [
                             'price' => $currentPrice,
                             'change_24h' => $changePercent,
-                            'source' => 'alpha_vantage'
+                            'source' => 'alpha_vantage',
                         ];
                     }
                 }
             }
 
             Log::warning("Alpha Vantage failed for {$asset->symbol}");
+
             return ['price' => 0, 'change_24h' => 0];
 
         } catch (\Exception $e) {
-            Log::error("Alpha Vantage API error for {$asset->symbol}: " . $e->getMessage());
+            Log::error("Alpha Vantage API error for {$asset->symbol}: ".$e->getMessage());
+
             return ['price' => 0, 'change_24h' => 0];
         }
     }
-
 
     private static function scrapePrice(\App\Models\SupportedAsset $asset): array
     {
@@ -284,21 +290,24 @@ class AssetPriceService
                         return [
                             'price' => $price,
                             'change_24h' => 0,
-                            'source' => 'web_scraped'
+                            'source' => 'web_scraped',
                         ];
                     }
                 }
 
                 Log::warning("No price found in scraped content for {$asset->symbol}");
+
                 return ['price' => 0, 'change_24h' => 0];
 
             } else {
                 Log::warning("Failed to scrape {$asset->price_url} for {$asset->symbol}");
+
                 return ['price' => 0, 'change_24h' => 0];
             }
 
         } catch (\Exception $e) {
-            Log::error("Scraping error for {$asset->symbol}: " . $e->getMessage());
+            Log::error("Scraping error for {$asset->symbol}: ".$e->getMessage());
+
             return ['price' => 0, 'change_24h' => 0];
         }
     }

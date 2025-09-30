@@ -1,32 +1,53 @@
 <?php
 
 use App\Models\SupportedAsset;
+use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
-use Illuminate\Validation\Rule;
 
-new class extends Component {
+new class extends Component
+{
     use WithPagination;
 
     public $search = '';
+
     public $selectedType = '';
-    public $showAddForm = false;
+
+    public $showAddModal = false;
+
+    public $showEditModal = false;
+
     public $editingAsset = null;
+
+    public $showManualPriceForm = false;
+
+    public $manualPriceAssetId = null;
+
+    public $manualPrice = '';
+
+    public $serviceStatus = [];
+
+    public $checkingStatus = false;
 
     // Form fields
     public $asset_type = 'crypto';
+
     public $symbol = '';
+
     public $name = '';
+
     public $api_id = '';
+
     public $isin = '';
+
     public $price_url = '';
 
     public function with(): array
     {
         $query = SupportedAsset::query()
-            ->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%')
-                ->orWhere('symbol', 'like', '%' . $this->search . '%'))
-            ->when($this->selectedType, fn($q) => $q->where('asset_type', $this->selectedType))
+            ->when($this->search, fn ($q) => $q->where('name', 'like', '%'.$this->search.'%')
+                ->orWhere('symbol', 'like', '%'.$this->search.'%'))
+            ->when($this->selectedType, fn ($q) => $q->where('asset_type', $this->selectedType))
             ->orderBy('asset_type')
             ->orderBy('name');
 
@@ -62,9 +83,13 @@ new class extends Component {
         ]);
 
         $this->reset(['asset_type', 'symbol', 'name', 'api_id', 'isin', 'price_url']);
-        $this->showAddForm = false;
+        $this->showAddModal = false;
 
-        session()->flash('success', __('Asset added successfully.'));
+        \Flux\Flux::toast(
+            heading: '✅ Asset Added',
+            text: __('Asset added successfully.'),
+            variant: 'success'
+        );
     }
 
     public function editAsset($assetId): void
@@ -78,7 +103,7 @@ new class extends Component {
         $this->api_id = $asset->api_id ?? '';
         $this->price_url = $asset->price_url ?? '';
         $this->isin = $asset->getIsin() ?? '';
-        $this->showAddForm = true;
+        $this->showEditModal = true;
     }
 
     public function updateAsset(): void
@@ -105,16 +130,21 @@ new class extends Component {
         ]);
 
         $this->reset(['asset_type', 'symbol', 'name', 'api_id', 'isin', 'price_url']);
-        $this->showAddForm = false;
+        $this->showEditModal = false;
         $this->editingAsset = null;
 
-        session()->flash('success', __('Asset updated successfully.'));
+        \Flux\Flux::toast(
+            heading: '✅ Asset Updated',
+            text: __('Asset updated successfully.'),
+            variant: 'success'
+        );
     }
 
     public function cancelEdit(): void
     {
         $this->reset(['asset_type', 'symbol', 'name', 'api_id', 'isin', 'price_url']);
-        $this->showAddForm = false;
+        $this->showEditModal = false;
+        $this->showAddModal = false;
         $this->editingAsset = null;
     }
 
@@ -129,9 +159,56 @@ new class extends Component {
     public function toggleAsset($assetId): void
     {
         $asset = SupportedAsset::findOrFail($assetId);
-        $asset->update(['is_active' => !$asset->is_active]);
+        $asset->update(['is_active' => ! $asset->is_active]);
 
         session()->flash('success', __('Asset status updated.'));
+    }
+
+    public function showManualPriceModal($assetId): void
+    {
+        $asset = SupportedAsset::findOrFail($assetId);
+        $this->manualPriceAssetId = $asset->id;
+        $this->manualPrice = $asset->current_price ? (string) $asset->current_price : '';
+        $this->showManualPriceForm = true;
+    }
+
+    public function saveManualPrice(): void
+    {
+        $validated = $this->validate([
+            'manualPrice' => ['required', 'numeric', 'min:0.00000001', 'max:999999999'],
+        ]);
+
+        $asset = SupportedAsset::findOrFail($this->manualPriceAssetId);
+        $asset->updatePrice((float) $validated['manualPrice'], 'manual');
+
+        $this->reset(['showManualPriceForm', 'manualPriceAssetId', 'manualPrice']);
+
+        \Flux\Flux::toast(
+            heading: '✅ Manual Price Set',
+            text: __(':name price updated to €:price', [
+                'name' => $asset->name,
+                'price' => number_format($asset->current_price, 2),
+            ]),
+            variant: 'success'
+        );
+    }
+
+    public function cancelManualPrice(): void
+    {
+        $this->reset(['showManualPriceForm', 'manualPriceAssetId', 'manualPrice']);
+    }
+
+    public function checkServiceStatus(): void
+    {
+        $this->checkingStatus = true;
+        $this->serviceStatus = \App\Services\SystemStatusService::checkAllServices();
+        $this->checkingStatus = false;
+
+        \Flux\Flux::toast(
+            heading: '🔍 Service Status Check Complete',
+            text: __('All services have been checked'),
+            variant: 'info'
+        );
     }
 
     public function updateAssetPrice($assetId): void
@@ -148,7 +225,7 @@ new class extends Component {
                 heading: '🤖 Price Updated',
                 text: __(':name price updated to €:price', [
                     'name' => $asset->name,
-                    'price' => number_format($result['price'], 2)
+                    'price' => number_format($result['price'], 2),
                 ]),
                 variant: 'success'
             );
@@ -157,7 +234,7 @@ new class extends Component {
                 heading: '❌ Price Update Failed',
                 text: __(':name: :error', [
                     'name' => $asset->name,
-                    'error' => $result['error']
+                    'error' => $result['error'],
                 ]),
                 variant: 'danger'
             );
@@ -174,7 +251,7 @@ new class extends Component {
             heading: '🤖 Bulk Price Update Started',
             text: __('Updating :count assets... This will take :time minutes.', [
                 'count' => $totalAssets,
-                'time' => ceil($totalAssets / 4) // Estimate: ~4 assets per minute
+                'time' => ceil($totalAssets / 4), // Estimate: ~4 assets per minute
             ]),
             variant: 'info',
             duration: 10000
@@ -216,7 +293,7 @@ new class extends Component {
             heading: '📊 Bulk Price Update Complete',
             text: __('✅ Updated :updated assets, ❌ :failed failed', [
                 'updated' => $updated,
-                'failed' => $failed
+                'failed' => $failed,
             ]),
             variant: $failed > 0 ? 'warning' : 'success'
         );
@@ -230,8 +307,15 @@ new class extends Component {
         $this->resetPage();
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
-    public function updatedSelectedType(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSelectedType(): void
+    {
+        $this->resetPage();
+    }
 }; ?>
 
 <div class="p-6">
@@ -241,12 +325,146 @@ new class extends Component {
             <p class="text-gray-600 dark:text-gray-400">{{ __('Manage supported cryptocurrencies, stocks, and ETFs') }}</p>
         </div>
         <div class="flex space-x-2">
+            <flux:button wire:click="checkServiceStatus" variant="ghost" icon="signal" :disabled="$checkingStatus">
+                {{ $checkingStatus ? __('Checking...') : __('Service Status') }}
+            </flux:button>
             <flux:button wire:click="updateAllPrices" variant="outline" icon="arrow-path">
                 {{ __('Update All Prices') }}
             </flux:button>
-            <flux:button wire:click="$toggle('showAddForm')" variant="primary" icon="plus">
+            <flux:button wire:click="$set('showAddModal', true)" variant="primary" icon="plus">
                 {{ __('Add Asset') }}
             </flux:button>
+        </div>
+    </div>
+
+    {{-- Service Status Display --}}
+    @if(!empty($serviceStatus))
+        <div class="bg-white rounded-lg border border-neutral-200 p-4 mb-6 dark:bg-neutral-800 dark:border-neutral-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Service Status') }}</h3>
+            <div class="grid gap-3 md:grid-cols-3">
+                {{-- Puppeteer Status --}}
+                <div class="flex items-center p-3 rounded-lg {{ $serviceStatus['puppeteer']['status'] === 'ok' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20' }}">
+                    <div class="flex-shrink-0">
+                        @if($serviceStatus['puppeteer']['status'] === 'ok')
+                            <flux:icon.check-circle class="w-6 h-6 text-green-600 dark:text-green-400" />
+                        @else
+                            <flux:icon.x-circle class="w-6 h-6 text-red-600 dark:text-red-400" />
+                        @endif
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium {{ $serviceStatus['puppeteer']['status'] === 'ok' ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300' }}">
+                            Puppeteer/Browsershot
+                        </p>
+                        <p class="text-xs {{ $serviceStatus['puppeteer']['status'] === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            {{ $serviceStatus['puppeteer']['message'] }}
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Claude AI Status --}}
+                <div class="flex items-center p-3 rounded-lg {{ $serviceStatus['claude_ai']['status'] === 'ok' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20' }}">
+                    <div class="flex-shrink-0">
+                        @if($serviceStatus['claude_ai']['status'] === 'ok')
+                            <flux:icon.check-circle class="w-6 h-6 text-green-600 dark:text-green-400" />
+                        @else
+                            <flux:icon.x-circle class="w-6 h-6 text-red-600 dark:text-red-400" />
+                        @endif
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium {{ $serviceStatus['claude_ai']['status'] === 'ok' ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300' }}">
+                            Claude AI Vision
+                        </p>
+                        <p class="text-xs {{ $serviceStatus['claude_ai']['status'] === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            {{ $serviceStatus['claude_ai']['message'] }}
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Crypto API Status --}}
+                <div class="flex items-center p-3 rounded-lg {{ $serviceStatus['crypto_api']['status'] === 'ok' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20' }}">
+                    <div class="flex-shrink-0">
+                        @if($serviceStatus['crypto_api']['status'] === 'ok')
+                            <flux:icon.check-circle class="w-6 h-6 text-green-600 dark:text-green-400" />
+                        @else
+                            <flux:icon.x-circle class="w-6 h-6 text-red-600 dark:text-red-400" />
+                        @endif
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium {{ $serviceStatus['crypto_api']['status'] === 'ok' ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300' }}">
+                            CoinGecko API
+                        </p>
+                        <p class="text-xs {{ $serviceStatus['crypto_api']['status'] === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            {{ $serviceStatus['crypto_api']['message'] }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                {{ __('Last checked:') }} {{ $serviceStatus['timestamp'] ?? now() }}
+            </div>
+        </div>
+    @endif
+
+    {{-- URL Recommendations Info --}}
+    <div class="bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800/50 p-4 mb-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <flux:icon.information-circle class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div class="ml-3 flex-1">
+                <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                    {{ __('🤖 Best URLs for AI Price Extraction') }}
+                </h3>
+                <div class="grid gap-3 md:grid-cols-2 text-xs">
+                    {{-- German Stocks --}}
+                    <div class="bg-white/50 dark:bg-gray-800/50 rounded p-3">
+                        <p class="font-medium text-gray-900 dark:text-white mb-2">🇩🇪 {{ __('Deutsche Aktien') }}</p>
+                        <code class="block bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded text-xs break-all">
+                            https://www.finanzen.net/aktien/[name]-aktie
+                        </code>
+                        <p class="text-gray-600 dark:text-gray-400 mt-1">
+                            {{ __('z.B. rheinmetall-aktie, bmw-aktie, sap-aktie') }}
+                        </p>
+                    </div>
+
+                    {{-- US Stocks --}}
+                    <div class="bg-white/50 dark:bg-gray-800/50 rounded p-3">
+                        <p class="font-medium text-gray-900 dark:text-white mb-2">🇺🇸 {{ __('US Stocks') }}</p>
+                        <code class="block bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded text-xs break-all">
+                            https://finviz.com/quote.ashx?t=[SYMBOL]
+                        </code>
+                        <p class="text-gray-600 dark:text-gray-400 mt-1">
+                            {{ __('z.B. TSLA, AAPL, MSFT, NVDA') }}
+                        </p>
+                    </div>
+
+                    {{-- ETFs --}}
+                    <div class="bg-white/50 dark:bg-gray-800/50 rounded p-3">
+                        <p class="font-medium text-gray-900 dark:text-white mb-2">📊 {{ __('ETFs') }}</p>
+                        <code class="block bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded text-xs break-all">
+                            https://extraetf.com/de/etf-profile/[ISIN]
+                        </code>
+                        <p class="text-gray-600 dark:text-gray-400 mt-1">
+                            {{ __('oder justetf.com, onvista.de') }}
+                        </p>
+                    </div>
+
+                    {{-- Warning --}}
+                    <div class="bg-white/50 dark:bg-gray-800/50 rounded p-3">
+                        <p class="font-medium text-red-900 dark:text-red-200 mb-2">⚠️ {{ __('Nicht empfohlen') }}</p>
+                        <ul class="text-gray-600 dark:text-gray-400 space-y-1">
+                            <li>❌ Yahoo Finance (zu dynamisch)</li>
+                            <li>❌ Google Finance (Cookie-Warnung)</li>
+                            <li>❌ MarketWatch (komplexes Layout)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <button
+                onclick="this.closest('.bg-gradient-to-r').style.display='none'"
+                class="flex-shrink-0 ml-2 text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-200">
+                <flux:icon.x-mark class="w-5 h-5" />
+            </button>
         </div>
     </div>
 
@@ -324,73 +542,6 @@ new class extends Component {
         </div>
     </div>
 
-    {{-- Add Asset Form --}}
-    @if($showAddForm)
-        <div class="bg-white rounded-lg border border-neutral-200 p-6 mb-6 dark:bg-neutral-800 dark:border-neutral-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {{ $editingAsset ? __('Edit Asset') : __('Add New Asset') }}
-            </h3>
-
-            <form wire:submit="{{ $editingAsset ? 'updateAsset' : 'addAsset' }}" class="space-y-4">
-                <div class="grid gap-4 md:grid-cols-2">
-                    <div>
-                        @if($editingAsset)
-                            <flux:input :label="__('Asset Type')" value="{{ __(ucfirst($asset_type)) }}" readonly />
-                        @else
-                            <flux:select wire:model="asset_type" :label="__('Asset Type')" required>
-                                <option value="crypto">{{ __('Cryptocurrency') }}</option>
-                                <option value="stock">{{ __('Stock') }}</option>
-                                <option value="etf">{{ __('ETF') }}</option>
-                                <option value="bond">{{ __('Bond') }}</option>
-                            </flux:select>
-                        @endif
-                    </div>
-                    <div>
-                        @if($editingAsset)
-                            <flux:input :label="__('Symbol')" value="{{ $symbol }}" readonly />
-                        @else
-                            <flux:input wire:model="symbol" :label="__('Symbol')" :placeholder="__('e.g., MSCI_WORLD, AAPL')" required />
-                        @endif
-                    </div>
-                </div>
-
-                <div>
-                    <flux:input wire:model="name" :label="__('Name')" :placeholder="__('e.g., MSCI World ETF')" required />
-                </div>
-
-                <div class="grid gap-4 md:grid-cols-2">
-                    <div>
-                        <flux:input wire:model="api_id" :label="__('API ID (Optional)')" :placeholder="__('CoinGecko ID or Yahoo symbol')" />
-                    </div>
-                    <div>
-                        <flux:input wire:model="isin" :label="__('ISIN (Optional)')" :placeholder="__('e.g., IE00B4L5Y983')" />
-                    </div>
-                </div>
-
-                {{-- AI Price Extraction Configuration --}}
-                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h4 class="font-medium text-gray-900 dark:text-white mb-3">{{ __('AI Price Extraction (Optional)') }}</h4>
-                    <div class="space-y-4">
-                        <div>
-                            <flux:input wire:model="price_url" :label="__('Price URL')" :placeholder="__('e.g., https://extraetf.com/de/etf-profile/IE00B4K48X80')" />
-                        </div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('Configure a URL for automatic price extraction using Puppeteer + AI vision. The system will take a screenshot and extract the price automatically.') }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex justify-end space-x-3">
-                    <flux:button wire:click="cancelEdit" variant="ghost">
-                        {{ __('Cancel') }}
-                    </flux:button>
-                    <flux:button type="submit" variant="primary">
-                        {{ $editingAsset ? __('Update Asset') : __('Add Asset') }}
-                    </flux:button>
-                </div>
-            </form>
-        </div>
-    @endif
 
     {{-- Assets List --}}
     <div class="bg-white rounded-lg border border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700">
@@ -447,6 +598,12 @@ new class extends Component {
 
                                     <flux:menu>
                                         <flux:menu.item
+                                            wire:click="showManualPriceModal({{ $asset->id }})"
+                                            icon="pencil-square">
+                                            {{ __('✏️ Set Manual Price') }}
+                                        </flux:menu.item>
+                                        <flux:menu.separator />
+                                        <flux:menu.item
                                             onclick="startAssetUpdate({{ $asset->id }}, '{{ $asset->name }}', '{{ $asset->price_url ? 'AI' : 'API' }}')"
                                             icon="camera">
                                             {{ $asset->price_url ? __('🤖 AI Update Price') : __('📊 API Update Price') }}
@@ -495,6 +652,158 @@ new class extends Component {
             </div>
         @endif
     </div>
+
+    {{-- Add Asset Modal --}}
+    <flux:modal wire:model.self="showAddModal" variant="flyout" class="w-full max-w-2xl">
+        <form wire:submit="addAsset" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Add New Asset') }}</flux:heading>
+                <flux:text class="mt-2">
+                    {{ __('Add a new cryptocurrency, stock, ETF, or bond to the system.') }}
+                </flux:text>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <flux:select wire:model="asset_type" :label="__('Asset Type')" required>
+                        <option value="crypto">{{ __('Cryptocurrency') }}</option>
+                        <option value="stock">{{ __('Stock') }}</option>
+                        <option value="etf">{{ __('ETF') }}</option>
+                        <option value="bond">{{ __('Bond') }}</option>
+                    </flux:select>
+                </div>
+                <div>
+                    <flux:input wire:model="symbol" :label="__('Symbol')" :placeholder="__('e.g., LINK, AAPL')" required />
+                </div>
+            </div>
+
+            <div>
+                <flux:input wire:model="name" :label="__('Name')" :placeholder="__('e.g., Chainlink')" required />
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <flux:input wire:model="api_id" :label="__('API ID (Optional)')" :placeholder="__('CoinGecko ID or API symbol')" />
+                </div>
+                <div>
+                    <flux:input wire:model="isin" :label="__('ISIN (Optional)')" :placeholder="__('e.g., IE00B4L5Y983')" />
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 class="font-medium text-gray-900 dark:text-white mb-3">{{ __('AI Price Extraction (Optional)') }}</h4>
+                <flux:input wire:model="price_url" :label="__('Price URL')" :placeholder="__('e.g., https://extraetf.com/de/etf-profile/...')" />
+                <flux:text class="mt-2 text-xs">
+                    {{ __('Configure a URL for automatic price extraction using Puppeteer + AI vision.') }}
+                </flux:text>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button type="button" variant="ghost">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">
+                    {{ __('Add Asset') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    {{-- Edit Asset Modal --}}
+    <flux:modal wire:model.self="showEditModal" variant="flyout" class="w-full max-w-2xl">
+        <form wire:submit="updateAsset" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Edit Asset') }}</flux:heading>
+                <flux:text class="mt-2">
+                    {{ __('Update asset information and configuration.') }}
+                </flux:text>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <flux:input :label="__('Asset Type')" value="{{ __(ucfirst($asset_type)) }}" readonly />
+                </div>
+                <div>
+                    <flux:input :label="__('Symbol')" value="{{ $symbol }}" readonly />
+                </div>
+            </div>
+
+            <div>
+                <flux:input wire:model="name" :label="__('Name')" :placeholder="__('e.g., Chainlink')" required />
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <flux:input wire:model="api_id" :label="__('API ID (Optional)')" :placeholder="__('CoinGecko ID or API symbol')" />
+                </div>
+                <div>
+                    <flux:input wire:model="isin" :label="__('ISIN (Optional)')" :placeholder="__('e.g., IE00B4L5Y983')" />
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 class="font-medium text-gray-900 dark:text-white mb-3">{{ __('AI Price Extraction (Optional)') }}</h4>
+                <flux:input wire:model="price_url" :label="__('Price URL')" :placeholder="__('e.g., https://extraetf.com/de/etf-profile/...')" />
+                <flux:text class="mt-2 text-xs">
+                    {{ __('Configure a URL for automatic price extraction using Puppeteer + AI vision.') }}
+                </flux:text>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button type="button" variant="ghost">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">
+                    {{ __('Update Asset') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    {{-- Manual Price Modal --}}
+    <flux:modal wire:model.self="showManualPriceForm" class="min-w-[22rem]">
+        <form wire:submit="saveManualPrice" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Set Manual Price') }}</flux:heading>
+                <flux:text class="mt-2">
+                    {{ __('This will manually set the price and mark it as manually updated.') }}
+                </flux:text>
+            </div>
+
+            <div>
+                <flux:input
+                    wire:model="manualPrice"
+                    :label="__('Price (EUR)')"
+                    type="number"
+                    step="0.00000001"
+                    min="0"
+                    :placeholder="__('e.g., 10.45')"
+                    required
+                    autofocus />
+                @error('manualPrice')
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button type="button" variant="ghost">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">
+                    {{ __('Save Price') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     @if(session('success'))
         <flux:toast variant="success">{{ session('success') }}</flux:toast>

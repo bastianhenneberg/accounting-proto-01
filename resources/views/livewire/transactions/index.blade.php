@@ -22,7 +22,7 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->startDate = now()->startOfMonth()->format('Y-m-d');
+        $this->startDate = now()->subMonths(3)->startOfMonth()->format('Y-m-d');
         $this->endDate = now()->endOfMonth()->format('Y-m-d');
     }
 
@@ -34,8 +34,8 @@ new class extends Component {
             ->when($this->selectedAccount, fn($q) => $q->where('account_id', $this->selectedAccount))
             ->when($this->selectedCategory, fn($q) => $q->where('category_id', $this->selectedCategory))
             ->when($this->selectedType, fn($q) => $q->where('type', $this->selectedType))
-            ->when($this->startDate, fn($q) => $q->where('transaction_date', '>=', $this->startDate))
-            ->when($this->endDate, fn($q) => $q->where('transaction_date', '<=', $this->endDate))
+            ->when($this->startDate, fn($q) => $q->whereDate('transaction_date', '>=', $this->startDate))
+            ->when($this->endDate, fn($q) => $q->whereDate('transaction_date', '<=', $this->endDate))
             ->orderBy('transaction_date', 'desc')
             ->orderBy('created_at', 'desc');
 
@@ -45,8 +45,8 @@ new class extends Component {
             ->when($this->selectedAccount, fn($q) => $q->where('account_id', $this->selectedAccount))
             ->when($this->selectedCategory, fn($q) => $q->where('category_id', $this->selectedCategory))
             ->when($this->selectedType, fn($q) => $q->where('type', $this->selectedType))
-            ->when($this->startDate, fn($q) => $q->where('transaction_date', '>=', $this->startDate))
-            ->when($this->endDate, fn($q) => $q->where('transaction_date', '<=', $this->endDate));
+            ->when($this->startDate, fn($q) => $q->whereDate('transaction_date', '>=', $this->startDate))
+            ->when($this->endDate, fn($q) => $q->whereDate('transaction_date', '<=', $this->endDate));
 
         return [
             'transactions' => $query->paginate(20),
@@ -102,8 +102,8 @@ new class extends Component {
             ->when($this->selectedAccount, fn($q) => $q->where('account_id', $this->selectedAccount))
             ->when($this->selectedCategory, fn($q) => $q->where('category_id', $this->selectedCategory))
             ->when($this->selectedType, fn($q) => $q->where('type', $this->selectedType))
-            ->when($this->startDate, fn($q) => $q->where('transaction_date', '>=', $this->startDate))
-            ->when($this->endDate, fn($q) => $q->where('transaction_date', '<=', $this->endDate))
+            ->when($this->startDate, fn($q) => $q->whereDate('transaction_date', '>=', $this->startDate))
+            ->when($this->endDate, fn($q) => $q->whereDate('transaction_date', '<=', $this->endDate))
             ->orderBy('transaction_date', 'desc')
             ->orderBy('created_at', 'desc');
 

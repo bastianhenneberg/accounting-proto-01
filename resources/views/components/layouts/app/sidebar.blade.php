@@ -123,6 +123,11 @@
 
         {{ $slot }}
 
+        {{-- Quick Add Transaction Modal --}}
+        @persist('quick-add-transaction')
+            @livewire('quick-add-transaction')
+        @endpersist
+
         {{-- Flux Toast Component --}}
         @persist('toast')
             <flux:toast />

@@ -2,6 +2,38 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 📋 Project Documentation & Tracking
+
+**IMPORTANT:** Before starting any work, always check these files:
+
+1. **`TODO.md`** - List of pending tasks and future enhancements
+2. **`docs/sessions/`** - Detailed documentation of all completed work
+3. **Latest session file** - Check most recent session for context
+
+### Documentation System
+
+This project uses a session-based documentation system to track all changes:
+
+- **Session Files:** `docs/sessions/YYYY-MM-DD-feature-name.md`
+  - One file per major feature or session
+  - Contains: goals, completed tasks, testing results, technical details
+  - Always create a new session file when starting significant work
+
+- **TODO.md:** Central task list
+  - Prioritized tasks (High, Medium, Low)
+  - Complexity estimates and time estimates
+  - Known issues and technical debt
+  - Update when completing tasks
+
+### Workflow for New Sessions
+
+1. **Read `TODO.md`** to see pending tasks
+2. **Check latest session files** in `docs/sessions/` for context
+3. **Create new session file** when starting work: `docs/sessions/YYYY-MM-DD-feature-name.md`
+4. **Document as you go:** Track decisions, problems, solutions
+5. **Update `TODO.md`** when completing tasks
+6. **Reference session files** for future context
+
 ## Project Overview
 
 This is a comprehensive personal finance management application built with Laravel 12 and the TALL stack (Tailwind CSS, Alpine.js, Laravel, and Livewire). The application provides complete financial tracking capabilities including accounts, transactions, categories, budgets, goals, and recurring transactions. It follows PHP and Laravel best practices and uses Livewire Volt for reactive components.

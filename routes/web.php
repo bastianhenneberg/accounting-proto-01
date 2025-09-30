@@ -46,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
     // Settings routes
     Route::redirect('settings', 'settings/profile');
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
+    Volt::route('settings/preferences', 'settings.preferences')->name('settings.preferences');
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
     Volt::route('settings/language', 'settings.language')->name('settings.language');
